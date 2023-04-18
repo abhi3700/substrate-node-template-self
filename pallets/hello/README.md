@@ -44,6 +44,14 @@ $ RUST_LOG=runtime=debug ./target/release/node-template --dev
 
 ---
 
+In `substrate-front-end-template` repo GUI, open the app in browser:
+
+```console
+$ npm run start
+```
+
+---
+
 Go to "Developer >> Extensions" page in Polkadot JS Apps:
 
 ![](../../img/extrinsics_page.png)
