@@ -45,6 +45,8 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
+/// Import the flipper pallet.
+pub use pallet_flipper;
 /// Import the hello pallet.
 pub use pallet_hello;
 /// Import the template pallet.
@@ -275,6 +277,11 @@ impl pallet_hello::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+/// Configure the pallet-flipper in pallets/flipper.
+impl pallet_flipper::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -292,7 +299,8 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
-		HelloModule: pallet_hello,
+		Hello: pallet_hello,
+		Flipper: pallet_flipper,
 	}
 );
 
@@ -340,7 +348,8 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
-		[pallet_hello, HelloModule]
+		[pallet_hello, Hello]
+		[pallet_flipper, Flipper]
 	);
 }
 
