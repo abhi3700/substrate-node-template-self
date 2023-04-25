@@ -71,7 +71,7 @@ view the pallet dispatchables in polkadot js apps:
 
 ## Pallet
 
-### Dispatchable Functions
+### Dispatchables
 
 #### `say_hello`
 

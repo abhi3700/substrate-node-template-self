@@ -4,6 +4,7 @@ members = [
     "pallets/template",
     "pallets/hello",
     "pallets/flipper",
+    "pallets/counter",
     "runtime",
 ]
 [profile.release]

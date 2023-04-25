@@ -1,6 +1,8 @@
-# Flipper Pallet
+# Counter Pallet
 
 ## Overview
+
+The Counter pallet provides functionality for a simple incrementing, decrementing, reset counter features as dispatchables.
 
 ## Build
 
@@ -54,22 +56,18 @@ $ npm run start
 
 Go to "Developer >> Extensions" page in Polkadot JS Apps:
 
-<!-- ![](../../img/extrinsics_page.png)
- -->
+![](../../img/extrinsics_page.png)
 
 ---
 
 View the pallet in polkadot js apps:
 
-<!-- ![](../../img/hello-pallet-demo1.png)
- -->
+![](../../img/hello-pallet-demo1.png)
 
 ---
 
 view the pallet dispatchables in polkadot js apps:
-
-<!-- ![](../../img/hello-pallet-demo2.png)
- -->
+![](../../img/hello-pallet-demo2.png)
 
 ---
 
@@ -125,7 +123,3 @@ In CLI,
 
 ❌ Throwing error as the `wish` started with 'hello' (as added in dispatchable function):
 ![](../../img/hello-pallet-sayany5.png)
-
-## References
-
-- [rust-crewmates flipper tutorial](https://github.com/rusty-crewmates/substrate-tutorials/tree/main/exercises/ex00-testing)

@@ -45,6 +45,8 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
+/// Import the counter pallet.
+pub use pallet_counter;
 /// Import the flipper pallet.
 pub use pallet_flipper;
 /// Import the hello pallet.
@@ -282,6 +284,11 @@ impl pallet_flipper::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+/// Configure the pallet-counter in pallets/counter.
+impl pallet_counter::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -301,6 +308,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		Hello: pallet_hello,
 		Flipper: pallet_flipper,
+		Counter: pallet_counter,
 	}
 );
 
@@ -350,6 +358,7 @@ mod benches {
 		[pallet_template, TemplateModule]
 		[pallet_hello, Hello]
 		[pallet_flipper, Flipper]
+		[pallet_counter, Counter]
 	);
 }
 

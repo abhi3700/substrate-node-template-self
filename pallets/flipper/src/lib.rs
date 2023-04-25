@@ -2,6 +2,12 @@
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
@@ -37,9 +43,9 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
+		/// Value not set
 		NoneSet,
-		/// Errors should have helpful documentation associated with them.
+		/// Value already Set
 		AlreadySet,
 	}
 
@@ -48,8 +54,7 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+		/// Set value: true/false
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn set_value(origin: OriginFor<T>, value: bool) -> DispatchResult {
@@ -58,7 +63,7 @@ pub mod pallet {
 			// https://docs.substrate.io/main-docs/build/origins/
 			let who = ensure_signed(origin)?;
 
-			// check if the value is not set
+			// Read a value from storage.
 			match <Value<T>>::get() {
 				Some(_) => Err(Error::<T>::AlreadySet)?,
 				None => {
@@ -72,7 +77,7 @@ pub mod pallet {
 			}
 		}
 
-		/// An example dispatchable that may throw a custom error.
+		/// Flip stored value (any: true/false)
 		#[pallet::call_index(1)]
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn flip_value(origin: OriginFor<T>) -> DispatchResult {
