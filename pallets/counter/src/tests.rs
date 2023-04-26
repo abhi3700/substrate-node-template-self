@@ -180,3 +180,26 @@ fn reset_fails_when_reset_twice() {
 		assert_noop!(Counter::reset(RuntimeOrigin::signed(1)), Error::<Test>::ZeroValueStored);
 	});
 }
+
+// ======kill_storage======
+#[test]
+fn kill_fails_when_none_stored() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			Counter::kill_storage(RuntimeOrigin::signed(1)),
+			Error::<Test>::NoneValueStored
+		);
+	});
+}
+
+#[test]
+fn kill_succeeds_when_some_stored() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		assert_ok!(Counter::set(RuntimeOrigin::signed(1), 10));
+		assert_eq!(Counter::count(), Some(10));
+		System::assert_last_event(Event::ValueStored { value: 10, who: 1 }.into());
+
+		assert_ok!(Counter::kill_storage(RuntimeOrigin::signed(1)));
+	});
+}

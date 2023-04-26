@@ -41,6 +41,7 @@ pub mod pallet {
 		ValueIncremented { old: u32, new: u32, who: T::AccountId },
 		ValueDecremented { old: u32, new: u32, who: T::AccountId },
 		ValueReset { old: u32, who: T::AccountId },
+		StorageCleared { who: T::AccountId },
 	}
 
 	// Errors inform users that something went wrong.
@@ -167,6 +168,26 @@ pub mod pallet {
 
 					// emit the event
 					Self::deposit_event(Event::ValueReset { old, who });
+
+					Ok(())
+				},
+			}
+		}
+
+		/// kill storage i.e. saving memory
+		#[pallet::call_index(4)]
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		pub fn kill_storage(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			// Read value from storage
+			match <Count<T>>::get() {
+				None => Err(Error::<T>::NoneValueStored)?,
+				Some(_) => {
+					<Count<T>>::kill();
+
+					// emit an event
+					Self::deposit_event(Event::StorageCleared { who });
 
 					Ok(())
 				},
