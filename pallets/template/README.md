@@ -8,73 +8,49 @@
 
 Check if the dependencies are working properly:
 
-```console
+```sh
 $ cargo check -p node-template-runtime
 ```
 
 Build the runtime's WASM binary with the following command:
 
-```console
+```sh
 $ cargo build --release
 ```
 
 ## Test
 
-<!-- TODO: -->
+To run all the tests in a pallet:
 
-## Mock
+```sh
+$ cargo test --package pallet-template
+```
 
-<!-- TODO: -->
+---
+
+To run the individual test:
+
+```sh
+# example
+$ cargo test --package pallet-template --lib -- tests::it_works_for_default_value
+```
+
+Although there is a button shown above to run individual test in VSCode.
 
 ## Benchmark
 
 <!-- TODO: -->
 
-## Demo
+## Run
 
 Run a relaychain node (w/o debug mode):
 
-```console
+```sh
 $ ./target/release/node-template --dev
 ```
 
 In debug mode, run a relaychain node:
 
-```console
+```sh
 $ RUST_LOG=runtime=debug ./target/release/node-template --dev
 ```
-
----
-
-In `substrate-front-end-template` repo GUI, open the app in browser:
-
-```console
-$ npm run start
-```
-
----
-
-Go to "Developer >> Extensions" page in Polkadot JS Apps:
-
-<!-- ![](../../img/extrinsics_page.png)
- -->
-
----
-
-View the pallet in polkadot js apps:
-
-<!-- ![](../../img/hello-pallet-demo1.png)
- -->
-
----
-
-view the pallet dispatchables in polkadot js apps:
-
-<!-- ![](../../img/hello-pallet-demo2.png)
- -->
-
----
-
-## Pallet
-
-### Dispatchables

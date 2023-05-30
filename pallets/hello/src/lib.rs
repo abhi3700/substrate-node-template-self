@@ -47,8 +47,8 @@ pub mod pallet {
 			who: T::AccountId,
 		},
 		SomeoneSaysAny {
-			wish: String,
 			who: T::AccountId,
+			wish: String,
 		},
 	}
 

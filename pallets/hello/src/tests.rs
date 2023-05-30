@@ -33,7 +33,7 @@ fn succeeds_for_say_any() {
 		assert_ok!(Hello::say_any(RuntimeOrigin::signed(1), "Good morning!".to_string()));
 		// Assert that the correct event was deposited
 		System::assert_last_event(
-			Event::SomeoneSaysAny { wish: "Good morning!".to_string(), who: 1 }.into(),
+			Event::SomeoneSaysAny { who: 1, wish: "Good morning!".to_string() }.into(),
 		);
 	});
 }
