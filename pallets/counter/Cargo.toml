@@ -5,7 +5,7 @@ description = "The Counter pallet provides functionality for a simple incrementi
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://github.com/abhi3700"
 edition = "2021"
-license = "Unlicense"
+license = "MIT"
 publish = false
 repository = "https://github.com/abhi3700/substrate-playground"
 

@@ -5,6 +5,7 @@ members = [
     "pallets/hello",
     "pallets/flipper",
     "pallets/counter",
+    "pallets/voting",
     "runtime",
 ]
 [profile.release]

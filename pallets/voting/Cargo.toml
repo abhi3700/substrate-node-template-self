@@ -1,13 +1,13 @@
 [package]
-name = "pallet-flipper"
+name = "pallet-voting"
 version = "4.0.0-dev"
-description = "FRAME pallet flipper that allows to flip the value of a boolean storage item"
-authors = ["Abhijit Roy <https://github.com/abhi3700>"]
-homepage = "https://github.com/abhi3700"
+description = "FRAME pallet voting"
+authors = ["abhi3700"]
+homepage = "https://substrate.io"
 edition = "2021"
 license = "MIT"
 publish = false
-repository = "https://github.com/abhi3700/substrate-playground"
+repository = "https://github.com/abhi3700/substrate-playground.git"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -2,6 +2,16 @@
 
 Pallets are the building blocks of the runtime. They are the modules that implement the business logic of the blockchain. They are the equivalent of smart contracts in other blockchains (parachains).
 
+## List of Pallets
+
+> The order is as per the level of complexity of the pallets.
+
+- [Template](./template) - A template pallet to create new pallets.
+- [Hello](./hello) - A simple pallet to say hello to the world.
+- [Flipper](./flipper) - A simple pallet to flip a boolean value.
+- [Counter](./counter) - A simple pallet to count the number of times it is called.
+- [🧑🏻‍💻] [Voting](./voting/) - A pallet to vote for a candidate. [Reference](https://docs.soliditylang.org/en/v0.8.17/solidity-by-example.html#voting)
+
 ## Add NEW pallet
 
 > including pallet code, test, benchmark
@@ -14,10 +24,16 @@ To add a new pallet, you need to follow these:
 
 #### 3. Finally, you need to add it to the `construct_runtime!` macro in the `runtime/src/lib.rs` file.
 
-#### 4. Check if the dependencies are working properly:
+#### 4. Check if the dependencies are working properly for the node runtime:
 
 ```sh
 $ cargo check -p node-template-runtime
+```
+
+> In order to check a pallet individually (at the root of the project):
+
+```sh
+$ cargo check -p pallet-hello
 ```
 
 #### 5. Build the runtime's WASM binary:

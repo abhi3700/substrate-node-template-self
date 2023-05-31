@@ -52,6 +52,7 @@ pallet-template = { version = "4.0.0-dev", default-features = false, path = "../
 pallet-hello = { version = "4.0.0-dev", default-features = false, path = "../pallets/hello" }
 pallet-flipper = { version = "4.0.0-dev", default-features = false, path = "../pallets/flipper" }
 pallet-counter = { version = "4.0.0-dev", default-features = false, path = "../pallets/counter" }
+pallet-voting = { version = "4.0.0-dev", default-features = false, path = "../pallets/voting" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", optional = true , branch = "polkadot-v0.9.40" }
@@ -77,6 +78,7 @@ std = [
 	"pallet-hello/std",
 	"pallet-flipper/std",
 	"pallet-counter/std",
+	"pallet-voting/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -105,6 +107,7 @@ runtime-benchmarks = [
 	"pallet-hello/runtime-benchmarks",
 	"pallet-flipper/runtime-benchmarks",
 	"pallet-counter/runtime-benchmarks",
+	"pallet-voting/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
@@ -121,6 +124,7 @@ try-runtime = [
 	"pallet-hello/try-runtime",
 	"pallet-flipper/try-runtime",
 	"pallet-counter/try-runtime",
+	"pallet-voting/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 ]
