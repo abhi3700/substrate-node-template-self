@@ -102,6 +102,14 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Already voted.
 		AlreadyVoted,
+		/// Zero proposal id.
+		ZeroProposalId,
+		/// Start timestamp must be in the future.
+		StartTimestampMustBeInTheFuture,
+		/// Proposal name cannot be empty.
+		ProposalNameCannotBeEmpty,
+		/// Proposal not created by caller.
+		ProposalNotCreatedByCaller,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -122,10 +130,10 @@ pub mod pallet {
 			// https://docs.substrate.io/main-docs/build/origins/
 			let who = ensure_signed(origin)?;
 
-			ensure!(name.len() > 0, "Proposal name cannot be empty.");
+			ensure!(name.len() > 0, Error::<T>::ProposalNameCannotBeEmpty);
 			ensure!(
 				start_timestamp > <frame_system::Pallet<T>>::block_number(),
-				"Start timestamp must be in the future."
+				Error::<T>::StartTimestampMustBeInTheFuture
 			);
 
 			// NOTE: the proposal index is unwrapped as zero if it does not exist i.e. None.
@@ -156,10 +164,13 @@ pub mod pallet {
 			// https://docs.substrate.io/main-docs/build/origins/
 			let who = ensure_signed(origin)?;
 
-			ensure!(proposal_id > 0, "Proposal ID must be greater than zero.");
+			ensure!(proposal_id > 0, Error::<T>::ZeroProposalId);
 
 			// Check that the proposal exists.
-			ensure!(<Proposals<T>>::contains_key(&who, proposal_id), "Proposal does not exist.");
+			ensure!(
+				<Proposals<T>>::contains_key(&who, proposal_id),
+				Error::<T>::ProposalNotCreatedByCaller
+			);
 
 			// Remove the proposal from storage.
 			<Proposals<T>>::remove(&who, proposal_id);
@@ -168,6 +179,14 @@ pub mod pallet {
 			Self::deposit_event(Event::ProposalCancelled { who, proposal_id });
 
 			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		/// A dispatchable for voting on a proposal. This function requires a signed transaction.
+		#[pallet::call_index(2)]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn vote(origin: OriginFor<T>, proposal_id: ProposalIndex) -> DispatchResult {
+			// TODO: add logic for voting
 			Ok(())
 		}
 	}
