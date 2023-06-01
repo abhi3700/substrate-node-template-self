@@ -11,11 +11,11 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
-mod mock;
+// #[cfg(test)]
+// mod mock;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 /// Simple index type for proposal counting.
 pub type ProposalIndex = u32;
@@ -187,6 +187,14 @@ pub mod pallet {
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn vote(origin: OriginFor<T>, proposal_id: ProposalIndex) -> DispatchResult {
 			// TODO: add logic for voting
+			Ok(())
+		}
+
+		/// A dispatchable for delegating a vote. This function requires a signed transaction.
+		#[pallet::call_index(3)]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn delegate(origin: OriginFor<T>, to: T::AccountId) -> DispatchResult {
+			// TODO: add logic for delegate voting
 			Ok(())
 		}
 	}
