@@ -15,7 +15,7 @@ $ cargo check -p node-template-runtime
 Build the runtime's WASM binary with the following command:
 
 ```sh
-$ cargo build --release
+$ cargo build -r
 ```
 
 ## Test

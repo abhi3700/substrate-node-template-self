@@ -39,7 +39,7 @@ $ cargo check -p pallet-hello
 #### 5. Build the runtime's WASM binary:
 
 ```sh
-$ cargo build --release
+$ cargo build -r
 ```
 
 #### 6. Write the test cases for your pallet in the `runtime/src/tests.rs` file. Prior to this, add `mock.rs` file for creating a runtime.
