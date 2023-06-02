@@ -73,3 +73,30 @@ Hello pallet has 2 dispatchables:
 - `say_hello`
 - `say_any`
 ```
+
+## Runtime Upgrade
+
+Select the file: ./target/release/wbuild/node-template-runtime/node-template-runtime.compressed.wasm
+
+Change in `runtime/src/lib.rs` file:
+
+```rust
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+	spec_name: create_runtime_str!("node-template"),
+	impl_name: create_runtime_str!("node-template"),
+	authoring_version: 1,
+	// The version of the runtime specification. A full node will not attempt to use its native
+	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
+	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
+	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
+	//   the compatible custom types.
+	spec_version: 100,
+	impl_version: 1,
+	apis: RUNTIME_API_VERSIONS,
+	transaction_version: 1,
+	state_version: 1,
+};
+```
+
+Change the spec_version to 101, 102, 103, etc. and build the runtime. And the binary will be generated at `./target/release/wbuild/node-template-runtime/node-template-runtime.compressed.wasm` & then upload it to the chain under "Extrinsics >> sudo >> sudoUncheckedWeight" & then "system >> setCode" with file_upload option. And then "Submit Transaction" as Alice (has DOT balance).
