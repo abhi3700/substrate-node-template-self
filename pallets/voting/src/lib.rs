@@ -91,6 +91,7 @@ pub mod pallet {
 		proposal: u32,
 	}
 
+	// TODO: Someone has to call this default function in order to set the default values.
 	// For each voter, we set the weight as 1 by default.
 	impl<T: Config> Default for Voter<T> {
 		fn default() -> Self {
