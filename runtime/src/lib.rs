@@ -25,7 +25,9 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime,
+	pallet_prelude::Get,
+	parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
 	},
@@ -53,6 +55,8 @@ pub use pallet_flipper;
 pub use pallet_hello;
 /// Import the template pallet.
 pub use pallet_template;
+/// Import the voting pallet
+pub use pallet_voting;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -132,6 +136,8 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+
+// max length of a name in voting pallet
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -289,6 +295,16 @@ impl pallet_counter::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+	pub const MaxStringLength: u32 = 100;
+}
+
+/// Configure the pallet-voting in pallets/voting.
+impl pallet_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MaxStringLength = MaxStringLength;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -309,6 +325,7 @@ construct_runtime!(
 		Hello: pallet_hello,
 		Flipper: pallet_flipper,
 		Counter: pallet_counter,
+		Voting: pallet_voting,
 	}
 );
 
@@ -359,6 +376,7 @@ mod benches {
 		[pallet_hello, Hello]
 		[pallet_flipper, Flipper]
 		[pallet_counter, Counter]
+		[pallet_voting, Voting]
 	);
 }
 

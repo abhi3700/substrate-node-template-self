@@ -41,22 +41,17 @@ pub use pallet::*;
 // #[cfg(test)]
 // mod tests;
 
-/// Simple index type for proposal counting.
-pub type ProposalIndex = u32;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
-	use crate::ProposalIndex;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + Get<ProposalIndex> + TypeInfo + Decode {
+	pub trait Config: frame_system::Config + TypeInfo {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -68,7 +63,7 @@ pub mod pallet {
 	/// Storage for the available proposal index.
 	#[pallet::storage]
 	#[pallet::getter(fn proposal_index)]
-	pub type LastProposalIndex<T: Config> = StorageValue<_, ProposalIndex>;
+	pub type LastProposalIndex<T: Config> = StorageValue<_, u32>;
 
 	/// A type for a single proposal.
 	#[derive(Debug, Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
@@ -85,7 +80,7 @@ pub mod pallet {
 	/// Storage for all proposals.
 	#[pallet::storage]
 	#[pallet::getter(fn proposals)]
-	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, ProposalIndex, Proposal<T>>;
+	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, u32, Proposal<T>>;
 
 	/// A type for a single voter.
 	#[derive(Debug, Encode, Decode, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
@@ -93,7 +88,7 @@ pub mod pallet {
 		weight: u32,
 		voted: bool,
 		delegate: Option<T::AccountId>,
-		proposal: ProposalIndex,
+		proposal: u32,
 	}
 
 	// For each voter, we set the weight as 1 by default.
@@ -114,11 +109,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event emitted when a proposal is created.
-		ProposalCreated { who: T::AccountId, proposal_id: ProposalIndex },
+		ProposalCreated { who: T::AccountId, proposal_id: u32 },
 		/// Event emitted when a proposal is cancelled
-		ProposalCancelled { who: T::AccountId, proposal_id: ProposalIndex },
+		ProposalCancelled { who: T::AccountId, proposal_id: u32 },
 		/// Event emitted when a proposal is voted on.
-		ProposalVoted { who: T::AccountId, proposal_id: ProposalIndex },
+		ProposalVoted { who: T::AccountId, proposal_id: u32 },
 		/// Event emitted when a voter delegates their vote.
 		VoterDelegated { who: T::AccountId, to: T::AccountId },
 	}
@@ -186,7 +181,7 @@ pub mod pallet {
 			// NOTE: the proposal index is unwrapped as zero if it does not exist i.e. None.
 			let proposal_id = <LastProposalIndex<T>>::get().unwrap_or(0);
 			let new_proposal_id =
-				proposal_id.checked_add(1).ok_or("Overflow adding a new proposal")?;
+				proposal_id.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)?;
 
 			let proposal = Proposal {
 				proposer: who.clone(),
@@ -220,7 +215,7 @@ pub mod pallet {
 		/// A dispatchable for cancelling a proposal. This function requires a signed transaction.
 		#[pallet::call_index(1)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn cancel_proposal(origin: OriginFor<T>, proposal_id: ProposalIndex) -> DispatchResult {
+		pub fn cancel_proposal(origin: OriginFor<T>, proposal_id: u32) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/main-docs/build/origins/
@@ -254,7 +249,7 @@ pub mod pallet {
 		/// A dispatchable for voting on a proposal. This function requires a signed transaction.
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn vote(origin: OriginFor<T>, proposal_id: ProposalIndex) -> DispatchResult {
+		pub fn vote(origin: OriginFor<T>, proposal_id: u32) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
@@ -290,7 +285,7 @@ pub mod pallet {
 							let new_vote_count = p
 								.vote_count
 								.checked_add(1)
-								.ok_or("Overflow adding a new vote count")?;
+								.ok_or(Error::<T>::ArithmeticOverflow)?;
 							p.vote_count = new_vote_count;
 							<Proposals<T>>::insert(proposal_id, &p);
 
@@ -321,13 +316,14 @@ pub mod pallet {
 			// the caller should have the some storage as there is default trait implemented.
 			ensure!(<Voters<T>>::contains_key(&who), Error::<T>::NoStorageForVoterDuringDelegation);
 
+			let mut to_temp: T::AccountId = to.clone();
 			// ensure there is no self-delegation route.
-			while let Some(v2) = <Voters<T>>::get(&to) {
+			while let Some(v2) = <Voters<T>>::get(&to_temp) {
 				if v2.delegate != None {
-					let to = v2.delegate.unwrap();
+					to_temp = v2.delegate.unwrap();
 
 					// ensure the subsequent delegate is not the same as the `signer`
-					ensure!(who != to, Error::<T>::SelfDelegateRouteDetected);
+					ensure!(who != to_temp, Error::<T>::SelfDelegateRouteDetected);
 				}
 			}
 
@@ -353,7 +349,7 @@ pub mod pallet {
 							let new_vote_count = p
 								.vote_count
 								.checked_add(d.weight)
-								.ok_or("Overflow adding a new vote count")?;
+								.ok_or(Error::<T>::ArithmeticOverflow)?;
 							p.vote_count = new_vote_count;
 							<Proposals<T>>::insert(d.proposal, &p);
 						}
@@ -361,7 +357,7 @@ pub mod pallet {
 					// if the delegate has not voted, add to the weight of the delegate
 					else {
 						let new_weight =
-							d.weight.checked_add(1).ok_or("Overflow adding a new weight")?;
+							d.weight.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)?;
 
 						// Update storage for delegate
 						let new_delegate = Voter { weight: new_weight, ..d };
