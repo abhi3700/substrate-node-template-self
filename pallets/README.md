@@ -10,7 +10,10 @@ Pallets are the building blocks of the runtime. They are the modules that implem
 - [Hello](./hello) - A simple pallet to say hello to the world.
 - [Flipper](./flipper) - A simple pallet to flip a boolean value.
 - [Counter](./counter) - A simple pallet to count the number of times it is called.
+- [Bank](./bank) - A simple pallet to get balance of an account from inside the pallet.
 - [🧑🏻‍💻] [Voting](./voting/) - A pallet to vote for a candidate. [Reference](https://docs.soliditylang.org/en/v0.8.17/solidity-by-example.html#voting)
+  - [ ] The default weight as `1` for all the users can be updated to any value based on their locked currency.
+- [ ] [Substrate Kitties]()
 
 ## Add NEW pallet
 
@@ -42,7 +45,21 @@ $ cargo check -p pallet-hello
 $ cargo build -r
 ```
 
-#### 6. Write the test cases for your pallet in the `runtime/src/tests.rs` file. Prior to this, add `mock.rs` file for creating a runtime.
+#### 6. Run the node:
+
+Run a relaychain node (w/o debug mode):
+
+```sh
+$ ./target/release/node-template --dev
+```
+
+In debug mode, run a relaychain node:
+
+```sh
+$ RUST_LOG=runtime=debug ./target/release/node-template --dev
+```
+
+#### 7. Write the test cases for your pallet in the `runtime/src/tests.rs` file. Prior to this, add `mock.rs` file for creating a runtime.
 
 ```sh
 # run all the tests in the runtime
