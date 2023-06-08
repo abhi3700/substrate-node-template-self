@@ -51,7 +51,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + TypeInfo {
+	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -67,6 +67,7 @@ pub mod pallet {
 
 	/// A type for a single proposal.
 	#[derive(Debug, Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
 	pub struct Proposal<T: Config> {
 		proposer: T::AccountId,
 		name: BoundedVec<u8, T::MaxStringLength>,
@@ -84,6 +85,7 @@ pub mod pallet {
 
 	/// A type for a single voter.
 	#[derive(Debug, Encode, Decode, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
 	pub struct Voter<T: Config> {
 		weight: u32,
 		voted: bool,
@@ -91,18 +93,15 @@ pub mod pallet {
 		proposal: u32,
 	}
 
-	// TODO: Someone has to call this default function in order to set the default values.
-	// For each voter, we set the weight as 1 by default.
-	impl<T: Config> Default for Voter<T> {
-		fn default() -> Self {
-			Self { weight: 1, voted: false, delegate: None, proposal: 0 }
-		}
-	}
-
 	/// Storage for the voters
+	#[pallet::type_value]
+	pub fn DefaultVoter<T: Config>() -> Voter<T> {
+		Voter { weight: 1, voted: false, delegate: None, proposal: 0 }
+	}
 	#[pallet::storage]
 	#[pallet::getter(fn voters)]
-	pub type Voters<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Voter<T>>;
+	pub type Voters<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Voter<T>, ValueQuery, DefaultVoter<T>>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -257,7 +256,8 @@ pub mod pallet {
 			// ensure the proposal is valid
 			ensure!(proposal_id > 0, Error::<T>::ZeroProposalId);
 
-			match <Voters<T>>::get(&who) {
+			// TODO: We need to ensure the check for if vote is not done. So, don't use match, rather use `if let`
+			match Some(<Voters<T>>::get(&who)) {
 				None => {
 					match <Proposals<T>>::get(proposal_id) {
 						Some(mut p) => {
@@ -319,7 +319,7 @@ pub mod pallet {
 
 			let mut to_temp: T::AccountId = to.clone();
 			// ensure there is no self-delegation route.
-			while let Some(v2) = <Voters<T>>::get(&to_temp) {
+			while let Some(v2) = Some(<Voters<T>>::get(&to_temp)) {
 				if v2.delegate != None {
 					to_temp = v2.delegate.unwrap();
 
@@ -328,11 +328,11 @@ pub mod pallet {
 				}
 			}
 
-			if let Some(v) = <Voters<T>>::get(&who) {
+			if let Some(v) = Some(<Voters<T>>::get(&who)) {
 				// ensure the `caller` account has not voted
 				ensure!(!v.voted, Error::<T>::AlreadyVoted);
 
-				if let Some(d) = <Voters<T>>::get(&to) {
+				if let Some(d) = Some(<Voters<T>>::get(&to)) {
 					// if the delegate already voted, directly add to the number of votes for the proposal
 					if d.voted {
 						// add the vote to the proposal
