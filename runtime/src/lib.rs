@@ -300,7 +300,7 @@ impl pallet_counter::Config for Runtime {
 /// Configure the pallet-bank in pallets/bank.
 impl pallet_bank::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
+	type MyCurrency = Balances;
 }
 
 parameter_types! {

@@ -18,18 +18,22 @@ pub mod pallet {
 
 	type _AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
 	type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+		<<T as Config>::MyCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		/// Currency type for this pallet.
-		type Currency: ReservableCurrency<Self::AccountId>;
+		/// MyCurrency type for this pallet. Here, we could have used `Currency` trait.
+		/// But, we need to use `reserved_balance` function which is not available in `Currency` trait.
+		/// That's why `ReservableCurrency` trait is used.
+		type MyCurrency: ReservableCurrency<Self::AccountId>;
 	}
 
-	#[derive(Debug, Encode, Decode, Default, Clone, TypeInfo, PartialEq, MaxEncodedLen)]
+	#[derive(
+		Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, Default, MaxEncodedLen,
+	)]
 	#[scale_info(skip_type_params(T))]
 	pub struct DiffBalances<T: Config> {
 		free_balance: BalanceOf<T>,
@@ -94,9 +98,9 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// get the diff balances of the caller. [Total = free + reserved]
-			let free_balance = T::Currency::free_balance(&who);
-			let reserved_balance = T::Currency::reserved_balance(&who);
-			let total_balance = T::Currency::total_balance(&who);
+			let free_balance = T::MyCurrency::free_balance(&who);
+			let reserved_balance = T::MyCurrency::reserved_balance(&who);
+			let total_balance = T::MyCurrency::total_balance(&who);
 
 			let diff_balances = DiffBalances { free_balance, reserved_balance, total_balance };
 
@@ -123,8 +127,8 @@ pub mod pallet {
 		pub fn update_balance(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let current_tot_balance = T::Currency::total_balance(&who);
-			let min_balance = T::Currency::minimum_balance();
+			let current_tot_balance = T::MyCurrency::total_balance(&who);
+			let min_balance = T::MyCurrency::minimum_balance();
 
 			log::info!("current_tot_balance: {:?}", current_tot_balance);
 			log::info!("min_balance: {:?}", min_balance);
@@ -143,9 +147,9 @@ pub mod pallet {
 					);
 
 					// get the diff balances of the caller. [Total = free + reserved]
-					let new_free_balance = T::Currency::free_balance(&who);
-					let new_reserved_balance = T::Currency::reserved_balance(&who);
-					let new_total_balance = T::Currency::total_balance(&who);
+					let new_free_balance = T::MyCurrency::free_balance(&who);
+					let new_reserved_balance = T::MyCurrency::reserved_balance(&who);
+					let new_total_balance = T::MyCurrency::total_balance(&who);
 
 					let new_diff_balances = DiffBalances {
 						free_balance: new_free_balance,

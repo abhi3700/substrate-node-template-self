@@ -66,15 +66,23 @@ $ RUST_LOG=runtime=debug ./target/release/node-template --dev
 $ cargo test
 
 # run the pallet (package) tests
-$ cargo test --package pallet-hello
+$ cargo test -p pallet-hello
 
 # run the pallet individual tests
-$ cargo test --package pallet-hello --lib -- tests::fails_for_wish_start_w_hello
+$ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
 ```
 
 > Although there is a button shown above test function to run individual test in VSCode.
 
-#### 7. Write the benchmarking code for your pallet in the `runtime/src/benchmarks.rs` file. <!-- TODO: -->
+#### 8. Write the benchmarking code for your pallet in the `runtime/src/benchmarks.rs` file. <!-- TODO: -->
+
+## Usage of my pallet in other's runtime [OPTIONAL]
+
+This is a very common scenario where anyone would want to use your pallet's funcitonality in their runtime. So, in order to do that, you need to follow these steps:
+
+1. Make a trait for my pallet's dispatchables in a separate file named `mytrait.rs` in the `pallets/<my-pallet>/src` directory.
+2. Then other dev can use my pallet's functionality/trait `mytrait.rs` in their runtime's pallet `pallets/<other-pallet>/src/lib.rs` file.
+3. And then they can either use it as an associated type of their `Config` trait or use it for their pallet implementation via `impl<T: Config> MyTrait<T> for Pallet<T> {}`.
 
 ## Documentation
 
@@ -90,6 +98,14 @@ Hello pallet has 2 dispatchables:
 - `say_hello`
 - `say_any`
 ```
+
+To view the documentation of `pallet-example` done inside `src/lib.rs` using `//!`, run this command at the repository root:
+
+```sh
+$ cargo doc -p pallet-example --open
+```
+
+It would create a `html` file in this location: `target/doc/pallet-example/index.html`
 
 ## Runtime Upgrade
 

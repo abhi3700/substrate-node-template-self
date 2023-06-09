@@ -66,7 +66,9 @@ pub mod pallet {
 	pub type LastProposalIndex<T: Config> = StorageValue<_, u32>;
 
 	/// A type for a single proposal.
-	#[derive(Debug, Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
+	#[derive(
+		Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, Default, MaxEncodedLen,
+	)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Proposal<T: Config> {
 		proposer: T::AccountId,
@@ -84,7 +86,9 @@ pub mod pallet {
 	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, u32, Proposal<T>>;
 
 	/// A type for a single voter.
-	#[derive(Debug, Encode, Decode, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
+	#[derive(
+		Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, Default, MaxEncodedLen,
+	)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Voter<T: Config> {
 		weight: u32,
