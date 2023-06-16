@@ -7,7 +7,7 @@
 //! - The voting pallet provides functionality for voting on proposals created by an individual
 //! account.
 //! - The proposal creators cannot vote on their own proposal.
-//! - The proposal creator can cancel their proposal before the voting period starts.
+//! - The proposal proposer can cancel their proposal before the voting period starts.
 //! - The proposal voter can delegate their vote to another account. But need to check for self-delegation route.
 //! - The proposal voter can vote on a proposal only once.
 //! - The proposal voter can vote on a proposal only if the voting period has started & not ended yet.
@@ -43,9 +43,9 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::dispatch::Vec;
+	use frame_support::{ensure, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
-
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -57,7 +57,10 @@ pub mod pallet {
 
 		// TODO: Research if this macro is required.
 		#[pallet::constant]
-		type MaxStringLength: Get<u32>;
+		type MaxProposalLength: Get<u32>;
+
+		#[pallet::constant]
+		type MinProposalLength: Get<u32>;
 	}
 
 	/// Storage for the available proposal index.
@@ -72,7 +75,7 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub struct Proposal<T: Config> {
 		proposer: T::AccountId,
-		name: BoundedVec<u8, T::MaxStringLength>,
+		name: BoundedVec<u8, T::MaxProposalLength>,
 		vote_count: u32,
 		// TODO: Research for adding a timestamp type here.
 		// Reference: https://stackoverflow.com/questions/68262293/substrate-frame-v2-how-to-use-pallet-timestamp
@@ -113,7 +116,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event emitted when a proposal is created.
-		ProposalCreated { who: T::AccountId, proposal_id: u32 },
+		ProposalCreated { proposer: T::AccountId, proposal_id: u32 },
 		/// Event emitted when a proposal is cancelled
 		ProposalCancelled { who: T::AccountId, proposal_id: u32 },
 		/// Event emitted when a proposal is voted on.
@@ -131,8 +134,12 @@ pub mod pallet {
 		ZeroProposalId,
 		/// Start timestamp must be in the future.
 		StartTimestampMustBeInTheFuture,
-		/// Proposal name cannot be empty.
-		ProposalNameCannotBeEmpty,
+		/// Either the proposal is too short or too long
+		InvalidProposalName,
+		/// Proposal name too short.
+		ProposalNameTooShort,
+		/// Proposal name too long.
+		ProposalNameTooLong,
 		/// No Proposal created by caller.
 		NoProposalCreatedByCaller,
 		/// Proposal already in voting period.
@@ -159,7 +166,8 @@ pub mod pallet {
 		CantDelegateToAnyoneIfAlreadyVoted,
 	}
 
-	/// Dispatchable for creating a new proposal.
+	/// All these functions mentioned here are callable by external user.
+	/// And each function cost some weight.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// A dispatchable for creating a proposal. This function requires a signed transaction.
@@ -167,16 +175,19 @@ pub mod pallet {
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn create_proposal(
 			origin: OriginFor<T>,
-			name: BoundedVec<u8, T::MaxStringLength>,
+			name: Vec<u8>,
 			start_timestamp: T::BlockNumber,
 			end_timestamp: T::BlockNumber,
 		) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
-			let who = ensure_signed(origin)?;
+			// check & get the signer of the transaction.
+			let proposer = ensure_signed(origin)?;
 
-			ensure!(name.len() > 0, Error::<T>::ProposalNameCannotBeEmpty);
+			let bounded_name: BoundedVec<_, _> =
+				name.try_into().map_err(|_| Error::<T>::ProposalNameTooLong)?;
+			ensure!(
+				bounded_name.len() >= T::MinProposalLength::get() as usize,
+				Error::<T>::ProposalNameTooShort
+			);
 			ensure!(
 				start_timestamp > <frame_system::Pallet<T>>::block_number(),
 				Error::<T>::StartTimestampMustBeInTheFuture
@@ -188,8 +199,8 @@ pub mod pallet {
 				proposal_id.checked_add(1).ok_or(Error::<T>::ArithmeticOverflow)?;
 
 			let proposal = Proposal {
-				proposer: who.clone(),
-				name,
+				proposer: proposer.clone(),
+				name: bounded_name,
 				vote_count: 0,
 				vote_start_timestamp: start_timestamp.into(),
 				vote_end_timestamp: end_timestamp.into(),
@@ -206,7 +217,7 @@ pub mod pallet {
 
 					// Emit an event.
 					Self::deposit_event(Event::ProposalCreated {
-						who,
+						proposer,
 						proposal_id: new_proposal_id,
 					});
 
@@ -220,9 +231,6 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn cancel_proposal(origin: OriginFor<T>, proposal_id: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
 			let who = ensure_signed(origin)?;
 
 			ensure!(proposal_id > 0, Error::<T>::ZeroProposalId);

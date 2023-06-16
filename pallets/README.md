@@ -6,14 +6,71 @@ Pallets are the building blocks of the runtime. They are the modules that implem
 
 > The order is as per the level of complexity of the pallets.
 
-- [Template](./template) - A template pallet to create new pallets.
-- [Hello](./hello) - A simple pallet to say hello to the world.
-- [Flipper](./flipper) - A simple pallet to flip a boolean value.
-- [Counter](./counter) - A simple pallet to count the number of times it is called.
-- [Bank](./bank) - A simple pallet to get balance of an account from inside the pallet.
-- [🧑🏻‍💻] [Voting](./voting/) - A pallet to vote for a candidate. [Reference](https://docs.soliditylang.org/en/v0.8.17/solidity-by-example.html#voting)
-  - [ ] The default weight as `1` for all the users can be updated to any value based on their locked currency.
+### Practice
+
+- [x] [Template](./template) - A template pallet to create new pallets.
+- [x] [Hello](./hello) - A simple pallet to say hello to the world.
+- [x] [Flipper](./flipper) - A simple pallet to flip a boolean value.
+- [x] [Counter](./counter) - A simple pallet to count the number of times it is called.
+- [ ] [Vault](./vault) - A simple pallet to get balance of an account from inside the pallet.
+- [ ] [Voting](./voting/) - A pallet to vote for a candidate. [Reference](https://docs.soliditylang.org/en/v0.8.17/solidity-by-example.html#voting) -
+
+  The default weight as `1` for all the users can be updated to any value based on their locked currency.
+
 - [ ] [Substrate Kitties]()
+
+### Real
+
+- [ ] AntelopeAccount
+  <details>
+  <summary>View details:</summary>
+  Q. In Rust substrate, I really think that account generation may have a better way. As in, in substrate, currently account has this stash versus controller model. And I feel that it should be in such a way where an account has two key pairs. So if one of the key pair is compromised, the person can actually use the other key pair to change that key pair. Can we do that?
+
+  A. Substrate already supports a model which is very similar to what you've described, known as the Stash/Controller model.
+
+  In this model, a stash account is like your bank account, where your funds are stored securely, and the controller account is like a debit card, which can make decisions on behalf of the stash account (like voting in governance, validating, nominating validators, etc.), but it doesn't hold any funds directly. If the controller is compromised, the attacker won't be able to directly access the funds in the stash account.
+
+  If you want to provide an additional level of security by having two key pairs for the controller account, where one could replace the other if it's compromised, it's possible but it would involve some modifications to the account model in Substrate. You would need to write a custom pallet to support this behavior.
+
+  The custom pallet would maintain a mapping of accounts to an array of their authorized keys. When one key is compromised, the other key could be used to update the compromised key. Here's a very simplified example of what the core logic might look like:
+
+  ```rust
+  decl_storage! {
+  	trait Store for Module<T: Config> as MultiSigAccountModule {
+  		// Mapping of account to its list of authorized keys
+  		AccountKeys get(fn account_keys): map hasher(blake2_128_concat) T::AccountId => Vec<T::AccountId>;
+  	}
+  }
+
+  decl_module! {
+  	pub struct Module<T: Config> for enum Call where origin: T::Origin {
+  		// Function to update a compromised key
+  		#[weight = 10_000]
+  		fn update_key(origin, old_key: T::AccountId, new_key: T::AccountId) -> dispatch::DispatchResult {
+  			let sender = ensure_signed(origin)?;
+
+  			// Ensure the sender is one of the authorized keys for this account
+  			let keys = Self::account_keys(&sender);
+  			ensure!(keys.contains(&sender), "Not authorized");
+
+  			// Find and replace the old key with the new key
+  			let old_key_index = keys.iter().position(|k| k == &old_key).ok_or("Old key not found")?;
+  			AccountKeys::<T>::mutate(&sender, |keys| keys[old_key_index] = new_key);
+
+  			Ok(())
+  		}
+  	}
+  }
+  ```
+
+  Please note, this is a very simplified and untested version of what you're looking to achieve. You would also need to add checks to ensure an account can't be left without any authorized keys, and you might want to add limits on the number of authorized keys an account can have.
+
+  Make sure to thoroughly review and test any changes to account management code, as mistakes can lead to lost funds or other serious issues.
+
+  </details>
+
+- [ ] DPoS
+-
 
 ## Add NEW pallet
 

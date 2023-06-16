@@ -1,11 +1,10 @@
-# Bank Pallet
+# Vault Pallet
 
 ## Overview
 
-Bank pallet has dispatchables:
+Vault pallet has dispatchables:
 
 - `set_balance`
-- `update_balance`
 
 ## Build
 

@@ -4244,7 +4244,6 @@ dependencies = [
  "frame-try-runtime",
  "pallet-aura",
  "pallet-balances",
- "pallet-bank",
  "pallet-counter",
  "pallet-flipper",
  "pallet-grandpa",
@@ -4254,6 +4253,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-vault",
  "pallet-voting",
  "parity-scale-codec",
  "scale-info",
@@ -4512,20 +4512,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-bank"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-counter"
 version = "4.0.0-dev"
 dependencies = [
@@ -4699,6 +4685,20 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-weights",
+]
+
+[[package]]
+name = "pallet-vault"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

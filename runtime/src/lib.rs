@@ -47,8 +47,6 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-/// Import the bank pallet
-pub use pallet_bank;
 /// Import the counter pallet.
 pub use pallet_counter;
 /// Import the flipper pallet.
@@ -57,6 +55,8 @@ pub use pallet_flipper;
 pub use pallet_hello;
 /// Import the template pallet.
 pub use pallet_template;
+/// Import the vault pallet
+pub use pallet_vault;
 /// Import the voting pallet
 pub use pallet_voting;
 
@@ -297,20 +297,22 @@ impl pallet_counter::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-/// Configure the pallet-bank in pallets/bank.
-impl pallet_bank::Config for Runtime {
+/// Configure the pallet-vault in pallets/vault.
+impl pallet_vault::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MyCurrency = Balances;
 }
 
 parameter_types! {
-	pub const MaxStringLength: u32 = 100;
+	pub const MaxProposalLength: u32 = 100;
+	pub const MinProposalLength: u32 = 5;
 }
 
 /// Configure the pallet-voting in pallets/voting.
 impl pallet_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type MaxStringLength = MaxStringLength;
+	type MaxProposalLength = MaxProposalLength;
+	type MinProposalLength = MinProposalLength;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -328,12 +330,11 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
-		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		Hello: pallet_hello,
 		Flipper: pallet_flipper,
 		Counter: pallet_counter,
-		Bank: pallet_bank,
+		Vault: pallet_vault,
 		Voting: pallet_voting,
 	}
 );
@@ -385,7 +386,7 @@ mod benches {
 		[pallet_hello, Hello]
 		[pallet_flipper, Flipper]
 		[pallet_counter, Counter]
-		[pallet_bank, Bank]
+		[pallet_vault, Vault]
 		[pallet_voting, Voting]
 	);
 }

@@ -1,23 +1,47 @@
-//! # Bank Pallet
+//! # Vault Pallet
 //!
-//! A simple pallet demonstrating the usage of `ReservableCurrency`,
-//! `NamedReservableCurrency` & `LockableCurrency` trait.
-//!
-//! - [`pallet::Config`]
+//! - [`Config`]
 //! - [`Call`]
 //!
 //! ## Overview
+//!
+//! The Vault pallet provides functionality for handling staking of tokens by users.
+//!
+//! When a user stakes tokens, they are added to the total staked tokens of the vault & individual vault.
+//! And when they unstake tokens, they are removed from the total staked tokens of the vault & individual vault.
+//!
+//! The accrued interest is calculated till the unstake timestamp.
+//!
+//! ### Terminology
+//!
+//! - **Vault**: where users stake their tokens.
+//! - **Stake**: lock tokens by users.
+//! - **Unstake**: unlock tokens unlocked by users.
+//! - **Total Staked Tokens**: total tokens staked by all users.
+//! - **Individual Staked Tokens**: tokens staked by a user.
+//! - **Accrued Interest**: interest earned by a user.
+//! - **Claimable Amount**: amount of tokens a user can claim including accrued interest.
+//! - **Stake Timestamp**: timestamp when a user stakes its tokens.
+//! - **Unstake Timestamp**: timestamp when a user unstakes its tokens.
 //!
 //! ## Interface
 //!
 //! ### Dispatchable Functions
 //!
-//! - `set_balance`
-//! - `update_balance` if a user's nonce is at least 2 more than the previous.
-//! - `reserve`
-//! - `unreserve`
-//! - `lock`
-//! - `unlock`
+//! #### Public
+//!
+//! These calls can be made any externally held account that is capable of creating
+//! a signed extrinsic.
+//!
+//! Actions:
+//!
+//! - `deposit`: Deposit tokens to its vault.
+//! - `unstake`: Unstake tokens from its vault.
+//! - `withdraw`: Withdraw tokens from its vault.
+//!
+//! #### Root
+//! - `set_apy`: Set APY for the vault.
+//!
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -34,9 +58,8 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	type _AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
-	type BalanceOf<T> =
-		<<T as Config>::MyCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
+	type BalanceOf<T> = <<T as Config>::MyCurrency as Currency<AccountOf<T>>>::Balance;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -101,9 +124,8 @@ pub mod pallet {
 		OldTotalBalanceIsGreater,
 	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
+	// All these functions mentioned here are callable by external user.
+	// And each function cost some weight.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set total balance
