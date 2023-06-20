@@ -21,22 +21,30 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::LockIdentifier;
+use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency, WithdrawReasons};
+
 pub use pallet::*;
+
+const ID1: LockIdentifier = *b"Staking ";
+
+type _AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
+type BalanceOf<T> =
+	<<T as Config>::MyCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
+	// use frame_support::dispatch::DispatchError;
 	use frame_support::log;
-	use frame_support::traits::{Currency, ReservableCurrency};
+	use frame_support::pallet_prelude::ValueQuery;
+	use frame_support::sp_runtime::DispatchError;
 	use frame_support::{pallet_prelude::*, Blake2_128Concat};
 	use frame_system::pallet_prelude::*;
-	use scale_info::TypeInfo;
+	// use sp_runtime::traits::Zero; // TODO: `$ cargo add sp_runtime --no-default-features`
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
-
-	type _AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
-	type BalanceOf<T> =
-		<<T as Config>::MyCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -46,46 +54,41 @@ pub mod pallet {
 		/// MyCurrency type for this pallet. Here, we could have used `Currency` trait.
 		/// But, we need to use `reserved_balance` function which is not available in `Currency` trait.
 		/// That's why `ReservableCurrency` trait is used.
-		type MyCurrency: ReservableCurrency<Self::AccountId>;
+		type MyCurrency: ReservableCurrency<Self::AccountId> + LockableCurrency<Self::AccountId>;
+
+		#[pallet::constant]
+		type MinStakedValue: Get<BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type MaxStakedValue: Get<BalanceOf<Self>>;
 	}
 
-	#[derive(
-		Clone, Encode, Decode, Eq, PartialEq, TypeInfo, RuntimeDebug, Default, MaxEncodedLen,
-	)]
-	#[scale_info(skip_type_params(T))]
-	pub struct DiffBalances<T: Config> {
-		free_balance: BalanceOf<T>,
-		reserved_balance: BalanceOf<T>,
-		total_balance: BalanceOf<T>,
-	}
-
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
-	#[pallet::getter(fn get_balance)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
-	// can also use `AccountOf<T>` instead of `T::AccountId` here.
-	pub type SomeBalance<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, DiffBalances<T>>;
+	#[pallet::getter(fn some_staking)]
+	// NOTE: can also use `AccountOf<T>` instead of `T::AccountId` here.
+	pub type SomeStaking<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>),
+		// ValuQuery, // optional
+	>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Total balance set.
-		BalanceSet {
-			who: T::AccountId, // can also use `AccountOf<T>`
-			total_balance: BalanceOf<T>,
-			current_block: T::BlockNumber,
+		/// Staked.
+		Staked {
+			caller: T::AccountId, // can also use `AccountOf<T>`
+			amount: BalanceOf<T>,
+			block: T::BlockNumber,
 		},
 
-		/// Total balance updated.
-		BalanceUpdated {
-			who: T::AccountId, // can also use `AccountOf<T>`
-			old_total_balance: BalanceOf<T>,
-			new_total_balance: BalanceOf<T>,
+		/// Unstaked
+		Unstaked {
+			caller: T::AccountId, // can also use `AccountOf<T>`
+			old_staked: Option<BalanceOf<T>>,
+			new_staked: Option<BalanceOf<T>>,
 			current_block: T::BlockNumber,
 		},
 	}
@@ -93,12 +96,14 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Balances Not set.
-		BalancesNotSet,
-		/// Insufficient reserves.
-		InsufficientReserves,
-		/// Old Total balance is greater.
-		OldTotalBalanceIsGreater,
+		/// Zero Stake Amount
+		ZeroStakeAmount,
+		/// Either min/max stake amount parsed
+		EitherMinMaxStakeAmountParsed,
+		/// Already Max. Staked
+		AlreadyMaxStaked,
+		/// Insufficient for Unstake
+		InsufficientForUnstake,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -106,89 +111,107 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set total balance
+		/// Stake
+		///
+		/// During each time, update the free, reserve, total balances
+		/// TEST:
+		///
+		/// If Alice stakes
+		/// ```
+		/// - check for --0-->{f: 100, s: 0} ❌
+		/// - check for --u128::Max-->{f: 100, s: 0} ❌
+		/// - check for --10-->{f: 100, s: 0} ✅
+		/// - check for --5-->{f: 90, s: 10} ✅
+		/// - check for --10-->{f: 90, s: 10} ✅
+		/// - check for --15-->{f:90, s:10} ✅
+		/// ```
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn set_balance(origin: OriginFor<T>) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
-			let who = ensure_signed(origin)?;
+		pub fn stake(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+			let caller = ensure_signed(origin)?;
 
-			// get the diff balances of the caller. [Total = free + reserved]
-			let free_balance = T::MyCurrency::free_balance(&who);
-			let reserved_balance = T::MyCurrency::reserved_balance(&who);
-			let total_balance = T::MyCurrency::total_balance(&who);
+			// TODO: check if this validation is required as I didn't found any such validation in `Staking` pallet or
+			// may be they already have it inbuilt in `set_lock`/`remove_lock` function
+			let _ = Self::validate_amount(amount);
 
-			let diff_balances = DiffBalances { free_balance, reserved_balance, total_balance };
+			let (f, r, t) = Self::get_frt_balances(&caller)?;
 
-			// ensure the balance is not set
-			ensure!(<SomeBalance<T>>::get(&who) == None, Error::<T>::BalancesNotSet);
+			// lock the amount as staked
+			T::MyCurrency::set_lock(ID1, &caller, amount, WithdrawReasons::RESERVE);
 
-			// Update storage.
-			<SomeBalance<T>>::insert(&who, diff_balances);
+			// update the new staked amount
+			if let Some((_, _, _, _)) = <SomeStaking<T>>::get(&caller) {
+				// Get the old staked amount.
+				let (_, _, old_s, _) = <SomeStaking<T>>::get(&caller).unwrap();
+
+				// Calculate the new staked amount.
+				let new_staked_amount = old_s + amount;
+
+				// Ensure that the new staked amount is within the maximum limit.
+				ensure!(new_staked_amount < T::MaxStakedValue::get(), "MaxStakedValue reached");
+
+				// Update the storage with the new staked amount.
+				<SomeStaking<T>>::insert(&caller, (f, r, new_staked_amount, t));
+			} else {
+				// If there was no previous staked amount, set the new staked amount to the given amount.
+				<SomeStaking<T>>::insert(&caller, (f, r, amount, t));
+			}
 
 			// Emit an event.
-			Self::deposit_event(Event::BalanceSet {
-				who,
-				total_balance,
-				current_block: <frame_system::Pallet<T>>::block_number(),
+			Self::deposit_event(Event::Staked {
+				caller,
+				amount,
+				block: <frame_system::Pallet<T>>::block_number(),
 			});
 
-			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
 
-		/// Update balance if it is greater than the old balance.
+		/// Unstake
+		/// During each time, update the free, reserve, total balances
+		///
+		/// TEST:
+		///
+		/// If Alice unstakes with {f:50, s:50} condition,
+		/// ```
+		/// - check for --0-->{f:50, s:50} ❌
+		/// - check for --u128::Max-->{f:90, s:10} ❌
+		/// - check for --10-->{f:50, s:50} ✅
+		/// - check for --51-->{f:50, s:50} ❌
+		/// - check for --10-->{f: 90, s: 10} ✅
+		/// - check for --15-->{f:90, s:10} ✅
+		/// ```
 		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
-		pub fn update_balance(origin: OriginFor<T>) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn unstake(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+			let caller = ensure_signed(origin)?;
 
-			let current_tot_balance = T::MyCurrency::total_balance(&who);
-			let min_balance = T::MyCurrency::minimum_balance();
+			let _ = Self::validate_amount(amount);
 
-			log::info!("current_tot_balance: {:?}", current_tot_balance);
-			log::info!("min_balance: {:?}", min_balance);
-			log::debug!("current_tot_balance: {:?}", current_tot_balance);
-			log::debug!("min_balance: {:?}", min_balance);
-			ensure!(current_tot_balance > min_balance, Error::<T>::InsufficientReserves);
+			// remove the lock
+			T::MyCurrency::remove_lock(ID1, &caller);
 
-			// Read a value from storage.
-			match <SomeBalance<T>>::get(&who) {
-				// Return an error if the value has not been set.
-				None => return Err(Error::<T>::BalancesNotSet.into()),
-				Some(old_diff_balances) => {
-					ensure!(
-						current_tot_balance > old_diff_balances.total_balance,
-						Error::<T>::OldTotalBalanceIsGreater
-					);
+			Ok(())
+		}
+	}
 
-					// get the diff balances of the caller. [Total = free + reserved]
-					let new_free_balance = T::MyCurrency::free_balance(&who);
-					let new_reserved_balance = T::MyCurrency::reserved_balance(&who);
-					let new_total_balance = T::MyCurrency::total_balance(&who);
+	impl<T: Config> Pallet<T> {
+		fn get_frt_balances(
+			caller: &T::AccountId,
+		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
+			let f = T::MyCurrency::free_balance(&caller);
+			let r = T::MyCurrency::reserved_balance(&caller);
+			let t = T::MyCurrency::total_balance(&caller);
 
-					let new_diff_balances = DiffBalances {
-						free_balance: new_free_balance,
-						reserved_balance: new_reserved_balance,
-						total_balance: new_total_balance,
-					};
+			Ok((f, r, t))
+		}
 
-					// update the storage
-					<SomeBalance<T>>::insert(&who, new_diff_balances);
-
-					// Emit an event.
-					Self::deposit_event(Event::BalanceUpdated {
-						who,
-						old_total_balance: old_diff_balances.total_balance,
-						new_total_balance,
-						current_block: <frame_system::Pallet<T>>::block_number(),
-					});
-
-					Ok(())
-				},
+		fn validate_amount(amount: BalanceOf<T>) -> Result<(), DispatchError> {
+			if amount == T::MinStakedValue::get() || amount > T::MaxStakedValue::get() {
+				return Err(Error::<T>::EitherMinMaxStakeAmountParsed.into());
 			}
+
+			Ok(())
 		}
 	}
 }

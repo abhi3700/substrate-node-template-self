@@ -52,6 +52,7 @@ pallet-template = { version = "4.0.0-dev", default-features = false, path = "../
 pallet-hello = { version = "4.0.0-dev", default-features = false, path = "../pallets/hello" }
 pallet-flipper = { version = "4.0.0-dev", default-features = false, path = "../pallets/flipper" }
 pallet-counter = { version = "4.0.0-dev", default-features = false, path = "../pallets/counter" }
+pallet-bank = { version = "4.0.0-dev", default-features = false, path = "../pallets/bank" }
 pallet-vault = { version = "4.0.0-dev", default-features = false, path = "../pallets/vault" }
 pallet-voting = { version = "4.0.0-dev", default-features = false, path = "../pallets/voting" }
 
@@ -79,6 +80,7 @@ std = [
 	"pallet-hello/std",
 	"pallet-flipper/std",
 	"pallet-counter/std",
+	"pallet-bank/std",
 	"pallet-vault/std",
 	"pallet-voting/std",
 	"pallet-timestamp/std",
@@ -109,6 +111,7 @@ runtime-benchmarks = [
 	"pallet-hello/runtime-benchmarks",
 	"pallet-flipper/runtime-benchmarks",
 	"pallet-counter/runtime-benchmarks",
+	"pallet-bank/runtime-benchmarks",
 	"pallet-vault/runtime-benchmarks",
 	"pallet-voting/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
@@ -127,6 +130,7 @@ try-runtime = [
 	"pallet-hello/try-runtime",
 	"pallet-flipper/try-runtime",
 	"pallet-counter/try-runtime",
+	"pallet-bank/try-runtime",	
 	"pallet-vault/try-runtime",
 	"pallet-voting/try-runtime",
 	"pallet-timestamp/try-runtime",

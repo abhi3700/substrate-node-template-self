@@ -28,12 +28,6 @@ sp-runtime = { version = "7.0.0", git = "https://github.com/paritytech/substrate
 
 [features]
 default = ["std"]
-std = [
-	"codec/std",
-	"frame-benchmarking?/std",
-	"frame-support/std",
-	"frame-system/std",
-	"scale-info/std",
-]
+std = ["codec/std", "frame-benchmarking?/std", "frame-support/std", "frame-system/std", "scale-info/std"]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

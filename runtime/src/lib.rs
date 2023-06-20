@@ -47,6 +47,8 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
+/// Import the bank pallet
+pub use pallet_bank;
 /// Import the counter pallet.
 pub use pallet_counter;
 /// Import the flipper pallet.
@@ -297,6 +299,19 @@ impl pallet_counter::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+	pub const MinStakedValue: Balance = 0;
+	pub const MaxStakedValue: Balance = u128::MAX;
+}
+
+// Configure the pallet-vault in pallets/vault.
+impl pallet_bank::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MyCurrency = Balances;
+	type MinStakedValue = MinStakedValue;
+	type MaxStakedValue = MaxStakedValue;
+}
+
 /// Configure the pallet-vault in pallets/vault.
 impl pallet_vault::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -334,6 +349,7 @@ construct_runtime!(
 		Hello: pallet_hello,
 		Flipper: pallet_flipper,
 		Counter: pallet_counter,
+		Bank: pallet_bank,
 		Vault: pallet_vault,
 		Voting: pallet_voting,
 	}
@@ -386,6 +402,7 @@ mod benches {
 		[pallet_hello, Hello]
 		[pallet_flipper, Flipper]
 		[pallet_counter, Counter]
+		[pallet_bank, Bank]
 		[pallet_vault, Vault]
 		[pallet_voting, Voting]
 	);
