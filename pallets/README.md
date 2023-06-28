@@ -17,6 +17,8 @@ Pallets are the building blocks of the runtime. They are the modules that implem
 
   The default weight as `1` for all the users can be updated to any value based on their locked currency.
 
+- [x] [Lockable Currency](./lockable-currency) - A pallet to lock currency (lockable) for a specific period of time.
+- [ ] [Bank](./bank/) - A pallet to transfer currency (reservable, lockable) from one account to another.
 - [ ] [Substrate Kitties]()
 
 ### Real

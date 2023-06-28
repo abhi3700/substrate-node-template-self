@@ -6,10 +6,12 @@
 use crate::{mock::*, /* Error, */ Event};
 use frame_support::{assert_noop, assert_ok};
 
+//=====lock_capital=====
+
 /// Here,
 /// 🧍 -> lock 0 (< free)
 #[test]
-fn success_when_locking_zero_amt() {
+fn lock_zero_amt() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 0));
@@ -22,7 +24,7 @@ fn success_when_locking_zero_amt() {
 /// Here,
 /// 🧍 -> lock 100 (< free)
 #[test]
-fn success_when_locking_some_amt() {
+fn lock_some_amt() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -35,7 +37,7 @@ fn success_when_locking_some_amt() {
 /// Here,
 /// 🧍 -> lock 10_000 (= free)
 #[test]
-fn success_when_locking_all_amt() {
+fn lock_all_amt() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 10_000));
@@ -51,7 +53,7 @@ fn success_when_locking_all_amt() {
 /// Here,
 /// 🧍 -> lock 10_001 (> free)
 #[test]
-fn success_when_locking_amt_that_exceeds_free_bal() {
+fn lock_amt_that_exceeds_free_bal() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 10_001));
@@ -64,11 +66,13 @@ fn success_when_locking_amt_that_exceeds_free_bal() {
 	});
 }
 
+//=====extend_lock=====
+
 /// Here,
 /// 🧍 -> lock 0
 /// 🧍 -> extend lock 0
 #[test]
-fn success_when_extend_lock_zero_after_zero_locked() {
+fn extend_lock_zero_after_zero_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 0));
@@ -85,7 +89,7 @@ fn success_when_extend_lock_zero_after_zero_locked() {
 ///
 /// take max(100, 100) as locked amount
 #[test]
-fn success_when_extend_lock_same_after_some_locked() {
+fn extend_lock_same_after_some_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -107,7 +111,7 @@ fn success_when_extend_lock_same_after_some_locked() {
 ///
 /// take max(100, 99) as locked amount
 #[test]
-fn success_when_extend_lock_less_after_some_locked() {
+fn extend_lock_less_after_some_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -129,7 +133,7 @@ fn success_when_extend_lock_less_after_some_locked() {
 ///
 /// take max(100, 101) as locked amount
 #[test]
-fn success_when_extend_lock_more_after_some_locked() {
+fn extend_lock_more_after_some_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -145,10 +149,12 @@ fn success_when_extend_lock_more_after_some_locked() {
 	});
 }
 
+//=====unlock_capital=====
+
 /// Here, unlocked after no lock operation
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_no_lock_op() {
+fn unlocked_after_no_lock_op() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::unlock_all(RuntimeOrigin::signed(1)));
@@ -162,7 +168,7 @@ fn success_when_unlocked_after_no_lock_op() {
 /// 🧍 -> lock 0
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_zero_locked() {
+fn unlocked_after_zero_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 0));
@@ -177,7 +183,7 @@ fn success_when_unlocked_after_zero_locked() {
 /// 🧍 -> lock 100
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_some_locked() {
+fn unlocked_after_some_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -192,7 +198,7 @@ fn success_when_unlocked_after_some_locked() {
 /// 🧍 -> lock 10_000 (all)
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_all_locked() {
+fn unlocked_after_all_locked() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 10_000));
@@ -208,7 +214,7 @@ fn success_when_unlocked_after_all_locked() {
 /// 🧍 -> extend lock 100
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_some_locked_and_then_extended_same() {
+fn unlocked_after_some_locked_and_then_extended_same() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -225,7 +231,7 @@ fn success_when_unlocked_after_some_locked_and_then_extended_same() {
 /// 🧍 -> extend lock 99
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_some_locked_and_then_extended_less() {
+fn unlocked_after_some_locked_and_then_extended_less() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));
@@ -242,7 +248,7 @@ fn success_when_unlocked_after_some_locked_and_then_extended_less() {
 /// 🧍 -> extend lock 101
 /// 🧍 -> unlock_all
 #[test]
-fn success_when_unlocked_after_some_locked_and_then_extended_more() {
+fn unlocked_after_some_locked_and_then_extended_more() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Balances::free_balance(1), 10_000);
 		assert_ok!(LockableCurrency::lock_capital(RuntimeOrigin::signed(1), 100));

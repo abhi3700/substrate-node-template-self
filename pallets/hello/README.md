@@ -26,7 +26,7 @@ $ cargo build -r
 To run all the tests in a pallet:
 
 ```sh
-$ cargo test --package pallet-hello
+$ cargo test -p pallet-hello
 ```
 
 ---
@@ -35,7 +35,7 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test --package pallet-hello --lib -- tests::fails_for_wish_start_w_hello
+$ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
 ```
 
 Although there is a button shown above to run individual test in VSCode.

@@ -55,6 +55,8 @@ pub use pallet_counter;
 pub use pallet_flipper;
 /// Import the hello pallet.
 pub use pallet_hello;
+/// Import the lockable currency pallet
+pub use pallet_lockable_currency;
 /// Import the template pallet.
 pub use pallet_template;
 /// Import the vault pallet
@@ -330,6 +332,14 @@ impl pallet_voting::Config for Runtime {
 	type MinProposalLength = MinProposalLength;
 }
 
+/// Configure the pallet-lockable-currency in pallets/lockable-currency.
+impl pallet_lockable_currency::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	// Passing in Balances ensures that your pallet's LockableCurrency methods have the same understanding
+	// of Balance than the pallet that handles accounts balances of your blockchain.
+	type StakeCurrency = Balances;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -352,6 +362,7 @@ construct_runtime!(
 		Bank: pallet_bank,
 		Vault: pallet_vault,
 		Voting: pallet_voting,
+		LockableCurrency: pallet_lockable_currency,
 	}
 );
 
@@ -405,6 +416,7 @@ mod benches {
 		[pallet_bank, Bank]
 		[pallet_vault, Vault]
 		[pallet_voting, Voting]
+		[pallet_lockable_currency, LockableCurrency]
 	);
 }
 

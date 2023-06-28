@@ -1,36 +1,53 @@
 //! # Bank Pallet
 //!
 //! A simple pallet demonstrating the usage of `ReservableCurrency`,
-//! `NamedReservableCurrency` & `LockableCurrency` trait.
+//! `NamedReservableCurrency`, `Lockable` traits.
 //!
 //! - [`pallet::Config`]
 //! - [`Call`]
 //!
 //! ## Overview
 //!
+//! Anyone can open FD (Fixed Deposit) by reserving some amount of currency.
+//!
+//! During the FD period, the reserved amount cannot be used. If the FD is closed before 100 blocks,
+//! then the reserved amount is returned to the user without any interest.
+//!
+//! But, if the FD is closed after 100 blocks, then the reserved amount is returned to the user with
+//! some interest. The interest is stored & set by the root origin.
+//!
+//! The interest comes from a treasury 💎 account which is funded by the root origin.
+//!
+//! NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain.
+//!
+//!
+//!
 //! ## Interface
 //!
 //! ### Dispatchable Functions
 //!
-//! - `set_balance`
-//! - `update_balance` if a user's nonce is at least 2 more than the previous.
-//! - `reserve`
-//! - `unreserve`
-//! - `lock`
+//! TODO: set interest rate, blocks limit in the runtime's next immediate
+//! block after the pallet deployment.
+//!
+//! - `set_fd_interest_rate`
+//! - `set_fd_blocks_limit`
+//! - `open_fd`
+//! - `close_fd`
+//! - `lock_for_dao`
 //! - `unlock`
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::traits::LockIdentifier;
-use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency, WithdrawReasons};
-
 pub use pallet::*;
 
-const ID1: LockIdentifier = *b"Staking ";
+#[cfg(test)]
+mod mock;
 
-type _AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
-type BalanceOf<T> =
-	<<T as Config>::MyCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+#[cfg(test)]
+mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -43,6 +60,14 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	// use sp_runtime::traits::Zero; // TODO: `$ cargo add sp_runtime --no-default-features`
 
+	use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency, WithdrawReasons};
+	use frame_support::traits::{LockIdentifier, NamedReservableCurrency};
+
+	const ID1: LockIdentifier = *b"Bank    ";
+
+	type AccountOf<T> = <T as frame_system::Config>::AccountId; // optional
+	type BalanceOf<T> = <<T as Config>::MyCurrency as Currency<AccountOf<T>>>::Balance;
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -54,14 +79,26 @@ pub mod pallet {
 		/// MyCurrency type for this pallet. Here, we could have used `Currency` trait.
 		/// But, we need to use `reserved_balance` function which is not available in `Currency` trait.
 		/// That's why `ReservableCurrency` trait is used.
-		type MyCurrency: ReservableCurrency<Self::AccountId> + LockableCurrency<Self::AccountId>;
+		type MyCurrency: ReservableCurrency<Self::AccountId>
+			+ LockableCurrency<Self::AccountId>
+			+ NamedReservableCurrency<Self::AccountId>;
 
 		#[pallet::constant]
-		type MinStakedValue: Get<BalanceOf<Self>>;
+		type MinFDValue: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type MaxStakedValue: Get<BalanceOf<Self>>;
+		type MaxFDValue: Get<BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type MinLockValue: Get<BalanceOf<Self>>;
+
+		#[pallet::constant]
+		type MaxLockValue: Get<BalanceOf<Self>>;
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn fd_interest)]
+	pub type FDInterest<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn some_staking)]
@@ -77,19 +114,34 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Staked.
-		Staked {
-			caller: T::AccountId, // can also use `AccountOf<T>`
+		/// FD Opened
+		FDOpened {
+			user: T::AccountId, // can also use `AccountOf<T>`
 			amount: BalanceOf<T>,
 			block: T::BlockNumber,
 		},
 
-		/// Unstaked
-		Unstaked {
-			caller: T::AccountId, // can also use `AccountOf<T>`
-			old_staked: Option<BalanceOf<T>>,
-			new_staked: Option<BalanceOf<T>>,
-			current_block: T::BlockNumber,
+		/// FD Closed
+		FDClosed {
+			user: T::AccountId, // can also use `AccountOf<T>`
+			block: T::BlockNumber,
+		},
+
+		/// FD Interest Set
+		FDInterestSet { interest: BalanceOf<T> },
+
+		/// Locked for DAO
+		LockedForDAO {
+			user: T::AccountId, // can also use `AccountOf<T>`
+			amount: BalanceOf<T>,
+			block: T::BlockNumber,
+		},
+
+		/// Unlocked
+		Unlocked {
+			user: T::AccountId, // can also use `AccountOf<T>`
+			amount: BalanceOf<T>,
+			block: T::BlockNumber,
 		},
 	}
 
@@ -110,90 +162,7 @@ pub mod pallet {
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		/// Stake
-		///
-		/// During each time, update the free, reserve, total balances
-		/// TEST:
-		///
-		/// If Alice stakes
-		/// ```
-		/// - check for --0-->{f: 100, s: 0} ❌
-		/// - check for --u128::Max-->{f: 100, s: 0} ❌
-		/// - check for --10-->{f: 100, s: 0} ✅
-		/// - check for --5-->{f: 90, s: 10} ✅
-		/// - check for --10-->{f: 90, s: 10} ✅
-		/// - check for --15-->{f:90, s:10} ✅
-		/// ```
-		#[pallet::call_index(0)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn stake(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
-
-			// TODO: check if this validation is required as I didn't found any such validation in `Staking` pallet or
-			// may be they already have it inbuilt in `set_lock`/`remove_lock` function
-			let _ = Self::validate_amount(amount);
-
-			let (f, r, t) = Self::get_frt_balances(&caller)?;
-
-			// lock the amount as staked
-			T::MyCurrency::set_lock(ID1, &caller, amount, WithdrawReasons::RESERVE);
-
-			// update the new staked amount
-			if let Some((_, _, _, _)) = <SomeStaking<T>>::get(&caller) {
-				// Get the old staked amount.
-				let (_, _, old_s, _) = <SomeStaking<T>>::get(&caller).unwrap();
-
-				// Calculate the new staked amount.
-				let new_staked_amount = old_s + amount;
-
-				// Ensure that the new staked amount is within the maximum limit.
-				ensure!(new_staked_amount < T::MaxStakedValue::get(), "MaxStakedValue reached");
-
-				// Update the storage with the new staked amount.
-				<SomeStaking<T>>::insert(&caller, (f, r, new_staked_amount, t));
-			} else {
-				// If there was no previous staked amount, set the new staked amount to the given amount.
-				<SomeStaking<T>>::insert(&caller, (f, r, amount, t));
-			}
-
-			// Emit an event.
-			Self::deposit_event(Event::Staked {
-				caller,
-				amount,
-				block: <frame_system::Pallet<T>>::block_number(),
-			});
-
-			Ok(())
-		}
-
-		/// Unstake
-		/// During each time, update the free, reserve, total balances
-		///
-		/// TEST:
-		///
-		/// If Alice unstakes with {f:50, s:50} condition,
-		/// ```
-		/// - check for --0-->{f:50, s:50} ❌
-		/// - check for --u128::Max-->{f:90, s:10} ❌
-		/// - check for --10-->{f:50, s:50} ✅
-		/// - check for --51-->{f:50, s:50} ❌
-		/// - check for --10-->{f: 90, s: 10} ✅
-		/// - check for --15-->{f:90, s:10} ✅
-		/// ```
-		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn unstake(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
-
-			let _ = Self::validate_amount(amount);
-
-			// remove the lock
-			T::MyCurrency::remove_lock(ID1, &caller);
-
-			Ok(())
-		}
-	}
+	impl<T: Config> Pallet<T> {}
 
 	impl<T: Config> Pallet<T> {
 		fn get_frt_balances(
@@ -206,12 +175,12 @@ pub mod pallet {
 			Ok((f, r, t))
 		}
 
-		fn validate_amount(amount: BalanceOf<T>) -> Result<(), DispatchError> {
-			if amount == T::MinStakedValue::get() || amount > T::MaxStakedValue::get() {
-				return Err(Error::<T>::EitherMinMaxStakeAmountParsed.into());
-			}
+		// fn validate_amount(amount: BalanceOf<T>) -> Result<(), DispatchError> {
+		// 	if amount == T::MinStakedValue::get() || amount > T::MaxStakedValue::get() {
+		// 		return Err(Error::<T>::EitherMinMaxStakeAmountParsed.into());
+		// 	}
 
-			Ok(())
-		}
+		// 	Ok(())
+		// }
 	}
 }

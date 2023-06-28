@@ -1,14 +1,18 @@
 //! # Lockable Currency pallet
 //! ## Overview
 //!
-//! Pre-requisite: The runtime must include the `Balances` pallet to handle the
+//! A simple pallet demonstrating the usage of `LockableCurrency` trait.
+//!
+//! NOTE: The runtime must include the `Balances` pallet to handle the
 //! accounts and balances for your chain.
 //!
 //! ## Interface
 //!
 //! ### Dispatchables
 //!
-//! - ``
+//! - `lock_capital`
+//! - `extend_lock`
+//! - `unlock_all`
 //!
 //! ## References
 //! - https://docs.substrate.io/reference/how-to-guides/pallet-design/implement-lockable-currency/
@@ -70,7 +74,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// extrinsic for locking
+		/// Locks the specified amount of tokens from the caller.
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn lock_capital(
@@ -89,7 +93,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// extrinsic for extending lock
+		/// Extends the lock period.
 		#[pallet::call_index(1)]
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn extend_lock(
@@ -107,7 +111,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// extrinsic for unlocking
+		/// Releases all locked tokens.
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn unlock_all(origin: OriginFor<T>) -> DispatchResult {

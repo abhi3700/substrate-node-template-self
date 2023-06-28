@@ -29,7 +29,7 @@ $ cargo build -r
 To run all the tests in a pallet:
 
 ```sh
-$ cargo test --package pallet-counter
+$ cargo test -p pallet-counter
 ```
 
 ---
@@ -38,7 +38,7 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test --package pallet-counter --lib -- tests::succeeds_when_value_set_as_non_zero
+$ cargo test -p pallet-counter --lib -- tests::succeeds_when_value_set_as_non_zero
 ```
 
 Although there is a button shown above the test function to run in individual test in VSCode.

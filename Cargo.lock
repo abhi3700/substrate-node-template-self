@@ -4249,6 +4249,7 @@ dependencies = [
  "pallet-flipper",
  "pallet-grandpa",
  "pallet-hello",
+ "pallet-lockable-currency",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -4519,6 +4520,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -4584,6 +4586,21 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-lockable-currency"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
