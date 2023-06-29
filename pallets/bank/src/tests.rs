@@ -26,6 +26,13 @@ fn get_default_block_duration() {
 }
 
 #[test]
+fn get_default_treasury() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Bank::treasury(), None);
+	});
+}
+
+#[test]
 fn get_default_fd_user_id() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Bank::fd_user_ids(&ALICE), 0);
