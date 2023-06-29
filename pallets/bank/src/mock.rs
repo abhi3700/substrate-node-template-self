@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crate as pallet_bank;
 use frame_support::{
 	parameter_types,
@@ -82,7 +83,7 @@ parameter_types! {
 	pub const MinFDValue: <Test as pallet_balances::Config>::Balance = 50;
 	pub const MaxFDValue: <Test as pallet_balances::Config>::Balance = 200_000;
 	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
-	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 10_000;
+	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
 }
 
 impl pallet_bank::Config for Test {

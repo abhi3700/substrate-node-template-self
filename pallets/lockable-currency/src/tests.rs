@@ -3,6 +3,8 @@
 //! NOTE: Locking is validated based on success/failure of transfer of funds
 //! from one account to another.
 
+#![allow(unused)]
+
 use crate::{mock::*, /* Error, */ Event};
 use frame_support::{assert_noop, assert_ok};
 

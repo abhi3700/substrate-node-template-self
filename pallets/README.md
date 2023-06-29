@@ -135,6 +135,18 @@ $ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
 
 #### 8. Write the benchmarking code for your pallet in the `runtime/src/benchmarks.rs` file. <!-- TODO: -->
 
+## Add crate to your pallet
+
+From your CLI at the root of the repo location, run this command:
+
+```sh
+# if w default features
+$ cargo add <crate-name> -p <pallet-name>
+
+# if w/o default features
+$ cargo add <crate-name> -p <pallet-name> --no-default-features
+```
+
 ## Usage of my pallet in other's runtime [OPTIONAL]
 
 This is a very common scenario where anyone would want to use your pallet's funcitonality in their runtime. So, in order to do that, you need to follow these steps:

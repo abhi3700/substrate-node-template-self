@@ -302,16 +302,20 @@ impl pallet_counter::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinStakedValue: Balance = 0;
-	pub const MaxStakedValue: Balance = u128::MAX;
+	pub const MinFDValue: Balance = 50;
+	pub const MaxFDValue: Balance = 200_000;
+	pub const MinLockValue: Balance = 20;
+	pub const MaxLockValue: Balance = 10_000;
 }
 
 // Configure the pallet-vault in pallets/vault.
 impl pallet_bank::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MyCurrency = Balances;
-	type MinStakedValue = MinStakedValue;
-	type MaxStakedValue = MaxStakedValue;
+	type MinFDValue = MinFDValue;
+	type MaxFDValue = MaxFDValue;
+	type MinLockValue = MinLockValue;
+	type MaxLockValue = MaxLockValue;
 }
 
 /// Configure the pallet-vault in pallets/vault.
