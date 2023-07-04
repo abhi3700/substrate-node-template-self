@@ -133,6 +133,8 @@ $ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
 
 > Although there is a button shown above test function to run individual test in VSCode.
 
+In order to view the values of the variables in the test function, you can use `println!` macro.
+
 #### 8. Write the benchmarking code for your pallet in the `runtime/src/benchmarks.rs` file. <!-- TODO: -->
 
 ## Add crate to your pallet

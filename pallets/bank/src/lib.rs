@@ -15,6 +15,11 @@
 //!
 //! But, if the FD is closed after 100 blocks, then the reserved amount is returned to the user with
 //! some interest. The interest is stored & set by the root origin.
+//! 
+//! TODO: 
+//! - [ ] We can also add the functionality of auto_maturity of FDs using hooks.
+//! - [ ] After every few blocks, some balance is transferred to the TREASURY account.
+//! 	- L0 chain's inflation is transferred to the TREASURY account.
 //!
 //! The interest comes from a treasury 💎 account which is funded by the root origin.
 //!
@@ -40,7 +45,6 @@
 
 pub use pallet::*;
 
-
 #[cfg(test)]
 mod mock;
 
@@ -61,7 +65,8 @@ pub mod pallet {
 	use frame_support::log;
 	use frame_support::{pallet_prelude::*, Blake2_128Concat};
 	use frame_system::pallet_prelude::*;
-	// `$ cargo add sp-runtime -p pallet-bank --no-default-features` at the node-template repo root.
+	use sp_runtime::print;
+// `$ cargo add sp-runtime -p pallet-bank --no-default-features` at the node-template repo root.
 	use sp_runtime::traits::{CheckedDiv, CheckedMul, CheckedSub, Zero};
 
 	use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency, LockIdentifier, NamedReservableCurrency, WithdrawReasons, ExistenceRequirement::{AllowDeath}};
@@ -97,29 +102,36 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type MaxLockValue: Get<BalanceOf<Self>>;
+
+		// in blocks
+		#[pallet::constant]
+		type MinFDPeriod: Get<u32>;
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn fd_interest)]
+	#[pallet::getter(fn fd_interest_rate)]
 	// in percentage i.e. 0.5% = 0.005 => represented as 1e5 (scaling_factor) => 500
 	// NOTE: We can put this scaling factor as high as possible i.e. 1e18,
 	// but then during division it would lose the precision. Hence, choose as small as possible.
 	// Hence, keep the scaling_factor as low as possible.
 	// make sure during arithmetic, you divide by 1e5
 	//
-	// E.g. If the interest rate is 0.005%, then the interest is 0.005e5 = 500
-	// If the interest rate is 10%, then the interest is 10e5 = 1_000_000
+	// E.g. If the interest rate is 0.005% per year, then the interest (in decimal * scaling_factor) is 0.005e5 = 500
+	// If the interest rate is 10%, then the interest set here as (0.1 * 1e5) = 10_000
 	//
-	// (u32, u32) tuple represents (interest, scaling_factor)
+	// (u32, u32, u32) tuple represents (interest, scaling_factor, fd_epoch)
 	// NOTE: type of `interest` has been kept as `u32` covering the whole range of possible percentages as high as 10%
 	// & as low as 0.00001%
 	// It is recommended to set the scaling factor 1e5 in general.
-	pub type FDInterest<T: Config> = StorageValue<_, (u32, u32)>;
+	// `fd_epoch` is the duration in blocks for which the interest is applicable like 8% per year. So, here 8% is the interest 
+	// & 1 year is the `fd_epoch`.
+	pub type FDInterestRate<T: Config> = StorageValue<_, (u32, u32, u32)>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn fd_block_duration)]
-	// Block limit for FD closure.
-	pub type FDBlockDuration<T: Config> = StorageValue<_, u16>;
+	// CLEANUP:
+	// #[pallet::storage]
+	// #[pallet::getter(fn fd_maturity)]
+	// // Block limit for FD closure. (min_staking_blocks, maturity_blocks)
+	// pub type FDMaturity<T: Config> = StorageValue<_, (u32, u32)>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn treasury)]
@@ -127,7 +139,7 @@ pub mod pallet {
 	pub type Treasury<T: Config> = StorageValue<_, T::AccountId>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn fd_user_ids)]
+	#[pallet::getter(fn fd_user_last_id)]
 	// Next FD User IDs for each user.
 	pub type FDUserIds<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery>;
 
@@ -149,13 +161,13 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Set FD Interest Rate & Scaling Factor
-		FDInterestSet { interest: u32, scaling_factor: u32 },
-
-		/// Set block duration
-		FDBlockDurationSet { block_duration: u16 },
+		FDInterestSet { interest: u32, scaling_factor: u32, fd_epoch: u32 },
 
 		/// Treasury account set
-		TreasurySet { block_num: T::BlockNumber },
+		TreasurySet { account: T::AccountId, block_num: T::BlockNumber },
+
+		/// Treasury account reset
+		TreasuryReset { block_num: T::BlockNumber },
 
 		/// FD Opened
 		FDOpened {
@@ -191,17 +203,19 @@ pub mod pallet {
 		/// Zero Interest Rate
 		ZeroInterestRate,
 		/// Interest Not Set
-		InterestNotSet,
-		/// Zero FD Block Duration
-		ZeroFDBlockDuration,
+		FDInterestNotSet,
 		/// FD Block Duration Not Set
-		FDBlockDurationNotSet,
+		MinFDPeriodNotSet,
 		/// Zero Amount When Opening FD
 		ZeroAmountWhenOpeningFD,
 		/// Insufficient Free Balance When Opening FD
 		InsufficientFreeBalanceWhenOpeningFD,
 		/// FD Already Exists With Id When Opening FD
 		FDAlreadyExistsWithIdWhenOpeningFD,
+		/// Zero Id When Closing FD
+		ZeroIdWhenClosingFD,
+		/// FD Not Matured Yet
+		FDNotMaturedYet,
 		/// FD Does Not Exist With Id When Closing FD
 		FDNotExistsWithIdWhenClosingFD,
 		/// Treasury Not Set
@@ -222,12 +236,15 @@ pub mod pallet {
 			<<T as pallet::Config>::MyCurrency as Currency<
 				<T as frame_system::Config>::AccountId,
 			>>::Balance: From<<T as frame_system::Config>::BlockNumber>, {
+
+		/// Set FD Interest Rate, Scaling Factor, Per_Duration (EPOCH)
 		#[pallet::call_index(0)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn set_fd_interest_rate(
 			origin: OriginFor<T>,
 			interest: u32,
 			scaling_factor: u32,
+			fd_epoch: u32
 		) -> DispatchResult {
 			// ensure the root origin signed
 			ensure_root(origin)?;
@@ -238,33 +255,20 @@ pub mod pallet {
 			// ensure scaling factor is not zero
 			ensure!(scaling_factor > 0, Error::<T>::ZeroInterestRate);
 
+			// ensure per duration is not zero
+			ensure!(fd_epoch > 0, Error::<T>::ZeroInterestRate);
+
 			// set the interest rate
-			FDInterest::<T>::put((interest, scaling_factor));
+			FDInterestRate::<T>::put((interest, scaling_factor, fd_epoch));
 
 			// emit the event
-			Self::deposit_event(Event::FDInterestSet { interest, scaling_factor });
+			Self::deposit_event(Event::FDInterestSet { interest, scaling_factor, fd_epoch });
 
 			Ok(())
 		}
 
-		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn set_fd_blocks_duration(origin: OriginFor<T>, block_duration: u16) -> DispatchResult {
-			// ensure the root origin signed
-			ensure_root(origin)?;
 
-			// ensure the block limit is not zero
-			ensure!(block_duration > 0, Error::<T>::ZeroFDBlockDuration);
-
-			// set the block limit
-			FDBlockDuration::<T>::put(block_duration);
-
-			// emit the event
-			Self::deposit_event(Event::FDBlockDurationSet { block_duration });
-
-			Ok(())
-		}
-
+		/// Set Treasury account from where the interest will be paid.
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn set_treasury(origin: OriginFor<T>, treasury: T::AccountId) -> DispatchResult {
@@ -272,35 +276,60 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			// set the treasury
-			Treasury::<T>::put(treasury);
+			Treasury::<T>::put(&treasury);
 
 			// emit the event
 			Self::deposit_event(Event::TreasurySet {
+				account: treasury.clone(),
 				block_num: <frame_system::Pallet<T>>::block_number(),
 			});
 
 			Ok(())
 		}
 
+		/// Reset Treasury account from where the interest will be paid.
 		#[pallet::call_index(3)]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn reset_treasury(origin: OriginFor<T>) -> DispatchResult {
+			// ensure the root origin signed
+			ensure_root(origin)?;
+
+			// check treasury is set
+			ensure!(Treasury::<T>::get().is_some(), Error::<T>::TreasuryNotSet);
+
+			// set the treasury
+			Treasury::<T>::kill();
+
+			// emit the event
+			Self::deposit_event(Event::TreasuryReset {
+				block_num: <frame_system::Pallet<T>>::block_number(),
+			});
+
+			Ok(())
+		}
+
+
+
+		/// Open FD
+		#[pallet::call_index(4)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn open_fd(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 			// ensure signed origin
 			let user = ensure_signed(origin)?;
 
+			// ensure the amount is not zero
+			ensure!(amount > Zero::zero(), Error::<T>::ZeroAmountWhenOpeningFD);
+
 			// ensure the treasury is set
 			ensure!(Treasury::<T>::get().is_some(), Error::<T>::TreasuryNotSet);
 
 			// ensure the interest details set
-			ensure!(<FDInterest<T>>::exists(), Error::<T>::InterestNotSet);
-
-			// ensure the amount is not zero
-			ensure!(amount > Zero::zero(), Error::<T>::ZeroAmountWhenOpeningFD);
+			ensure!(<FDInterestRate<T>>::exists(), Error::<T>::FDInterestNotSet);
 
 			// get the next fd id for the user
 			let next_fd_id = Self::get_next_fd_id(&user);
 
-			// ensure there is no FD with the id received
+			// ensure there is no FD with the id received [REDUNDANT]
 			ensure!(
 				!FDVaults::<T>::contains_key(&user, next_fd_id),
 				Error::<T>::FDAlreadyExistsWithIdWhenOpeningFD
@@ -316,7 +345,7 @@ pub mod pallet {
 			FDVaults::<T>::insert(&user, next_fd_id, (amount, current_block_number));
 
 			// update the next fd id for the user
-			FDUserIds::<T>::insert(&user, next_fd_id + 1);
+			FDUserIds::<T>::insert(&user, next_fd_id);
 
 			// emit the event
 			Self::deposit_event(Event::FDOpened { user, amount, block: current_block_number });
@@ -324,73 +353,79 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn close_fd(origin: OriginFor<T>, id: u16) -> DispatchResult {
 			// ensure signed origin
 			let user = ensure_signed(origin)?;
 
+			// ensure the id is non-zero
+			ensure!(id > 0, Error::<T>::ZeroIdWhenClosingFD);
+			
+			// get the FD details & check for the valid ID.
+			let (amount, old_block_num) =
+				FDVaults::<T>::get(&user, id).ok_or(Error::<T>::FDNotExistsWithIdWhenClosingFD)?;
+			println!("Amount: {:?}, FD opened at block no.: {:?}", amount, old_block_num);	// for testing
+
 			// ensure there is a treasury account set & get that if exists
 			let treasury = <Treasury<T>>::get().ok_or(Error::<T>::TreasuryNotSet)?;
 
-			// get the FD details
-			let (amount, old_block_num) =
-				FDVaults::<T>::get(&user, id).ok_or(Error::<T>::FDNotExistsWithIdWhenClosingFD)?;
-
 			// get the interest if exists
-			let (interest_rate, scaling_factor) =
-				FDInterest::<T>::get().ok_or(Error::<T>::InterestNotSet)?;
+			let (interest_rate, scaling_factor, fd_epoch) =
+				FDInterestRate::<T>::get().ok_or(Error::<T>::FDInterestNotSet)?;
 
-			// get the block duration if exists
-			let block_duration =
-				FDBlockDuration::<T>::get().ok_or(Error::<T>::FDBlockDurationNotSet)?;
-
+				
 			// get the current block number
 			let current_block_num = <frame_system::Pallet<T>>::block_number();
-
+			
 			// get the block difference if any
-			let block_difference = <frame_system::Pallet<T>>::block_number()
-				.checked_sub(&old_block_num)
-				.ok_or(Error::<T>::ArithmeticUnderflow)?;
+			let staked_duration = current_block_num.checked_sub(&old_block_num).ok_or(Error::<T>::ArithmeticUnderflow)?;
+			// log::info!(target: TARGET, "Staked duration: {:?}", interest);
+
+
+			// get the min_fd_period
+			let min_fd_period = T::MinFDPeriod::get();
+			// ensure that FD is closed not before the min. FD duration i.e. MinFDPeriod
+			ensure!(staked_duration > min_fd_period.into(), Error::<T>::FDNotMaturedYet);
 
 			// TODO: Add FD expiry date as param in storage & corresponding logic
 
-			// if the FD is open for min. duration i.e. block_duration, then calculate the interest
-			// & transfer the amount + interest from the treasury account to the caller;
+			// if the FD is open for min. duration i.e. `MinFDPeriod`, then calculate the interest
+			// & transfer the (amount + interest) from the treasury account to the FD holder;
 			// else transfer the amount only from the treasury account to the caller
-			if block_difference > block_duration.into() {
-				// M-1: calculate the interest directly
-				// let interest = amount
-				// 	.checked_mul(&interest_rate.into())
-				// 	.and_then(|v| v.checked_mul(&block_difference.into()))
-				// 	.and_then(|v| v.checked_div(&block_duration.into()))
-				// 	.and_then(|v| v.checked_div(&scaling_factor.into()))
-				// 	.ok_or("Interest calculation failed")?;
+			// M-1: calculate the interest directly
+			let interest = amount
+				.checked_mul(&interest_rate.into())
+				.and_then(|v| v.checked_mul(&staked_duration.into()))
+				.and_then(|v| v.checked_div(&fd_epoch.into()))
+				.and_then(|v| v.checked_div(&scaling_factor.into()))
+				.ok_or("Interest calculation failed")?;
 
-				// M-2: calculate the interest indirectly using Nr/Dr approach
-				// TODO: wrap this code snippet in a function `get_interest` & use it here.
-				let numerator = amount
-					.checked_mul(&interest_rate.into())
-					.and_then(|v| v.checked_mul(&block_difference.into()))
-					.ok_or("Interest Numerator calculation failed")?;
-				let denominator = block_duration
-					.checked_mul(scaling_factor as u16)
-					.ok_or("Interest Denominator calculation failed")?;
-				let interest = numerator
-					.checked_div(&denominator.into())
-					.ok_or("Interest calculation failed")?;
+			// M-2: calculate the interest indirectly using Nr/Dr approach
+			// TODO: wrap this code snippet in a function `get_interest` & use it here.
+			// let numerator = amount
+			// 	.checked_mul(&interest_rate.into())
+			// 	.and_then(|v: <<T as Config>::MyCurrency as Currency<T::AccountId>>::Balance| v.checked_mul(&staked_duration.into()))
+			// 	.ok_or("Interest Numerator calculation failed")?;
+			// let denominator = fd_epoch
+			// 	.checked_mul(scaling_factor)
+			// 	.ok_or("Interest Denominator calculation failed")?;
+			// let interest = numerator
+			// 	.checked_div(&denominator.into())
+			// 	.ok_or("Interest calculation failed")?;
 
-				// TODO: debug the value using both the approaches above.
-				log::info!(target: TARGET, "Interest: {:?}", interest);
+			// TODO: debug the value using both the approaches above.
+			log::info!(target: TARGET, "Interest: {:?}", interest);
+			println!("Interest: {:?}", interest);	// for testing
 
-				// transfer the interest from the treasury account to the user
-				let _ = T::MyCurrency::transfer(
-					&treasury,
-					&user,
-					interest,
-					AllowDeath,
-				);
-			}
+
+			// transfer the interest from the treasury account to the user
+			let _ = T::MyCurrency::transfer(
+				&treasury,
+				&user,
+				interest,
+				AllowDeath,
+			);
 
 			// unreserve the amount from the user
 			T::MyCurrency::unreserve(&user, amount);
@@ -398,13 +433,15 @@ pub mod pallet {
 			// remove the FD details from the storage for the user
 			<FDVaults<T>>::remove(&user, id);
 
+			// TODO: add amount, interest fields in the event
+			// - keep a `get_interest_amt` function for external call to view the interest amount
 			// emit the event
 			Self::deposit_event(Event::FDClosed { user, block: current_block_num });
 
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn lock_for_dao(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 			// ensure signed origin
@@ -426,7 +463,7 @@ pub mod pallet {
 
 			Ok(())}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
 		pub fn unlock_for_dao(origin: OriginFor<T>) -> DispatchResult {
 			// ensure signed origin
@@ -454,11 +491,11 @@ pub mod pallet {
 		// fn get_interest_amt(
 		// 	amount: BalanceOf<T>,
 		// 	scaling_factor: u16,
-		// 	block_duration: u16,
-		// 	block_difference: T::BlockNumber,
+		// 	fd_epoch: u16,
+		// 	staked_duration: T::BlockNumber,
 		// ) -> BalanceOf<T> {
 		// 	let interest = ((amount as u128)
-		// 		.checked_mul((scaling_factor as u128).checked_mul(block_difference as u128)))
+		// 		.checked_mul((scaling_factor as u128).checked_mul(staked_duration as u128)))
 		// 	.checked_div((block_duration as u128))
 		// 	.unwrap();
 

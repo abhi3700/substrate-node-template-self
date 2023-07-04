@@ -84,15 +84,17 @@ parameter_types! {
 	pub const MaxFDValue: <Test as pallet_balances::Config>::Balance = 200_000;
 	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
 	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
+	pub const MinFDPeriod: u32 = 60;
 }
 
 impl pallet_bank::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MyCurrency = Balances;
-	type MinFDValue = ();
-	type MaxFDValue = ();
+	type MinFDValue = MinFDValue;
+	type MaxFDValue = MaxFDValue;
 	type MinLockValue = MinLockValue;
 	type MaxLockValue = MaxLockValue;
+	type MinFDPeriod = MinFDPeriod;
 }
 
 // Build genesis storage according to the mock runtime.
