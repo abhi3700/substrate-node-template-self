@@ -1,7 +1,9 @@
 use crate::{mock::*, Error, Event};
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::DispatchError::{BadOrigin, Token};
-use sp_runtime::TokenError::Frozen;
+use sp_runtime::{
+	DispatchError::{BadOrigin, Token},
+	TokenError::Frozen,
+};
 
 // Block wise assumptions for corresponding time, assuming 1 BLOCK = 6 seconds
 const ONE_DAY: u64 = 14_400;

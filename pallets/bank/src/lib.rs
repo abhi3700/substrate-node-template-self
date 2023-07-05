@@ -64,19 +64,20 @@ const TARGET: &'static str = "pallet_bank::close_fd";
 pub mod pallet {
 
 	use super::*;
-	use frame_support::log;
-	use frame_support::{pallet_prelude::*, Blake2_128Concat};
+	use frame_support::{
+		log,
+		pallet_prelude::*,
+		sp_runtime::{
+			traits::{CheckedDiv, CheckedMul, CheckedSub, One, Zero},
+			DispatchError,
+		},
+		traits::{
+			Currency, ExistenceRequirement::AllowDeath, LockIdentifier, LockableCurrency,
+			NamedReservableCurrency, ReservableCurrency, WithdrawReasons,
+		},
+		Blake2_128Concat,
+	};
 	use frame_system::pallet_prelude::*;
-	// `$ cargo add sp-runtime -p pallet-bank --no-default-features` at the node-template repo root.
-	use sp_runtime::{
-		traits::{CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-		DispatchError,
-	};
-
-	use frame_support::traits::{
-		Currency, ExistenceRequirement::AllowDeath, LockIdentifier, LockableCurrency,
-		NamedReservableCurrency, ReservableCurrency, WithdrawReasons,
-	};
 
 	const ID1: LockIdentifier = *b"Invest__";
 

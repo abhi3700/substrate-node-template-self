@@ -3,8 +3,6 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://docs.substrate.io/reference/frame-pallets/>
-
-#[warn(unused_imports)]
 pub use pallet::*;
 
 #[cfg(test)]
@@ -15,14 +13,15 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod weights;
+pub use weights::*;
 
 // This code defines a substrate pallet using the `frame_support` and `frame_system` frameworks.
 #[frame_support::pallet]
 pub mod pallet {
 	// The following lines bring in necessary dependencies from the `frame_support` and `frame_system` crates.
-	use frame_support::log;
-	use frame_support::pallet_prelude::*;
-	use frame_support::sp_runtime::print;
+	use super::*;
+	use frame_support::{log, pallet_prelude::*, sp_runtime::print};
 	use frame_system::pallet_prelude::*;
 	use scale_info::prelude::string::String;
 
@@ -34,6 +33,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// Type representing the weight of this pallet
+		type WeightInfo: WeightInfo;
 	}
 
 	// Pallets use events to inform users when important changes are made.

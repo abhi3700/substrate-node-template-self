@@ -48,6 +48,12 @@ pub use sp_runtime::{Perbill, Permill};
 /// Import the template pallet.
 pub use pallet_template;
 
+/// Import the bank pallet.
+// pub use pallet_bank;
+
+/// Import the hello pallet.
+pub use pallet_hello;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -273,6 +279,30 @@ impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
+/// Configure the pallet-hello in pallets/template.
+impl pallet_hello::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_hello::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const MinFDValue: Balance = 50;
+	pub const MaxFDValue: Balance = 200_000;
+	pub const MinLockValue: Balance = 20;
+	pub const MaxLockValue: Balance = 10_000;
+	pub const MinFDPeriod: u64 = 5_184_000;	// 1 year
+}
+
+// Configure the pallet-bank in pallets/bank.
+// impl pallet_bank::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type WeightInfo = pallet_bank::weights::SubstrateWeight<Runtime>;
+// 	type MyCurrency = Balances;
+// 	type MinFDValue = MinFDValue;
+// 	type MaxFDValue = MaxFDValue;
+// 	type MinLockValue = MinLockValue;
+// 	type MaxLockValue = MaxLockValue;
+// }
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -290,6 +320,8 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
+		Hello: pallet_hello,
+		// Bank: pallet_bank,
 	}
 );
 
@@ -337,6 +369,8 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
+		[pallet_hello, Hello]
+		// [pallet_bank, Bank]
 	);
 }
 

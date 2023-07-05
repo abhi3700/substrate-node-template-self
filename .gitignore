@@ -12,3 +12,6 @@
 
 # drawio
 .$*.drawio.bkp
+
+# .vscode
+.vscode/settings.json
