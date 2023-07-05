@@ -2,10 +2,7 @@
 
 ## Overview
 
-Bank pallet has dispatchables:
-
-- `set_balance`
-- `update_balance`
+<!-- TODO: Write descriptions for the pallet -->
 
 ## Build
 
@@ -26,7 +23,7 @@ $ cargo build -r
 To run all the tests in a pallet:
 
 ```sh
-$ cargo test -p pallet-bank
+$ cargo test -p pallet-template
 ```
 
 ---
@@ -35,7 +32,7 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test -p pallet-bank --lib -- tests::it_works_for_default_value
+$ cargo test -p pallet-template --lib -- tests::it_works_for_default_value
 ```
 
 Although there is a button shown above to run individual test in VSCode.

@@ -1,4 +1,3 @@
-#![allow(unused)]
 use crate as pallet_bank;
 use frame_support::{
 	parameter_types,
@@ -7,17 +6,11 @@ use frame_support::{
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	AccountId32, MultiSignature,
+	traits::{BlakeTwo256, IdentityLookup},
 };
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 // define test accounts
 pub const ALICE: u64 = 1;
@@ -25,6 +18,8 @@ pub const BOB: u64 = 2;
 pub const CHARLIE: u64 = 3;
 pub const DAVE: u64 = 4;
 pub const TREASURY: u64 = 100;
+
+pub const ONE_YEAR: u64 = 5_184_000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -77,6 +72,10 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type HoldIdentifier = ();
+	type MaxHolds = ();
 }
 
 parameter_types! {
@@ -84,11 +83,12 @@ parameter_types! {
 	pub const MaxFDValue: <Test as pallet_balances::Config>::Balance = 200_000;
 	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
 	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
-	pub const MinFDPeriod: u32 = 60;
+	pub const MinFDPeriod: u64 = ONE_YEAR;
 }
 
 impl pallet_bank::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
 	type MyCurrency = Balances;
 	type MinFDValue = MinFDValue;
 	type MaxFDValue = MaxFDValue;
