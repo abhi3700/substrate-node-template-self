@@ -54,6 +54,9 @@ pub use pallet_template;
 /// Import the hello pallet.
 pub use pallet_hello;
 
+/// Import the counter pallet.
+pub use pallet_counter;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -285,6 +288,12 @@ impl pallet_hello::Config for Runtime {
 	type WeightInfo = pallet_hello::weights::SubstrateWeight<Runtime>;
 }
 
+/// Configure the pallet-counter in pallets/counter.
+impl pallet_counter::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_counter::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
 	pub const MinFDValue: Balance = 50;
 	pub const MaxFDValue: Balance = 200_000;
@@ -321,6 +330,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		Hello: pallet_hello,
+		Counter: pallet_counter,
 		// Bank: pallet_bank,
 	}
 );
@@ -370,6 +380,7 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
 		[pallet_hello, Hello]
+		[pallet_counter, Counter]
 		// [pallet_bank, Bank]
 	);
 }

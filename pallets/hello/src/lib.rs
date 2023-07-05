@@ -68,7 +68,7 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight(T::WeightInfo::say_hello())]
 		pub fn say_hello(origin: OriginFor<T>) -> DispatchResult {
 			// Ensure that the caller is a regular keypair account
 			let who = ensure_signed(origin)?;
@@ -85,7 +85,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight(T::WeightInfo::say_any())]
 		pub fn say_any(origin: OriginFor<T>, wish: String) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 

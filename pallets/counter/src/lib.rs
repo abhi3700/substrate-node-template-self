@@ -8,9 +8,14 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+pub mod weights;
+pub use weights::*;
+
 #[frame_support::pallet]
 pub mod pallet {
-
+	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -22,6 +27,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// Type representing the weight of this pallet
+		type WeightInfo: WeightInfo;
 	}
 
 	// The pallet's runtime storage items.
@@ -66,7 +73,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Set Some non-zero value
 		#[pallet::call_index(0)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		#[pallet::weight(T::WeightInfo::set())]
 		pub fn set(origin: OriginFor<T>, value: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -92,7 +99,7 @@ pub mod pallet {
 
 		/// Increment dispatchable for incrementing the count
 		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(T::WeightInfo::increment())]
 		pub fn increment(origin: OriginFor<T>, by: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -122,7 +129,7 @@ pub mod pallet {
 
 		/// Decrement dispatchable for decrementing the count
 		#[pallet::call_index(2)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(T::WeightInfo::decrement())]
 		pub fn decrement(origin: OriginFor<T>, by: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -152,7 +159,7 @@ pub mod pallet {
 
 		/// Reset dispatchable for resetting the count
 		#[pallet::call_index(3)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(T::WeightInfo::reset())]
 		pub fn reset(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -176,7 +183,7 @@ pub mod pallet {
 
 		/// kill storage i.e. saving memory
 		#[pallet::call_index(4)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(T::WeightInfo::kill_storage())]
 		pub fn kill_storage(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 

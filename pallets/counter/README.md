@@ -2,13 +2,7 @@
 
 ## Overview
 
-The Counter pallet has these dispatchables:
-
-- `set`
-- `increment`
-- `decrement`
-- `reset`
-- `kill_storage`
+<!-- TODO: Write descriptions for the pallet -->
 
 ## Build
 
@@ -38,10 +32,10 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test -p pallet-counter --lib -- tests::succeeds_when_value_set_as_non_zero
+$ cargo test -p pallet-counter --lib -- tests::it_works_for_default_value
 ```
 
-Although there is a button shown above the test function to run in individual test in VSCode.
+Although there is a button shown above to run individual test in VSCode.
 
 ## Benchmark
 

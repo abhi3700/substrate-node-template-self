@@ -1,13 +1,13 @@
 [package]
 name = "node-template-runtime"
 version = "4.0.0-dev"
-description = "A fresh FRAME-based Substrate node, ready for hacking."
-authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
+description = "A fresh FRAME-based Substrate node, ready for hacking on playground."
+authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>", "Abhijit Roy <https:://github.com/abhi3700>"]
 homepage = "https://substrate.io/"
 edition = "2021"
 license = "MIT-0"
 publish = false
-repository = "https://github.com/substrate-developer-hub/substrate-node-template/"
+repository = "https://github.com/abhi3700/substrate-playground"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -50,6 +50,7 @@ frame-system-benchmarking = { version = "4.0.0-dev", default-features = false, g
 # Local Dependencies
 pallet-template = { version = "4.0.0-dev", default-features = false, path = "../pallets/template" }
 pallet-hello = { version = "4.0.0-dev", default-features = false, path = "../pallets/hello" }
+pallet-counter = { version = "4.0.0-dev", default-features = false, path = "../pallets/counter" }
 # pallet-bank = { version = "4.0.0-dev", default-features = false, path = "../pallets/bank" }
 
 [build-dependencies]
@@ -74,6 +75,7 @@ std = [
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-hello/std",
+	"pallet-counter/std",
 	# "pallet-bank/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -101,6 +103,7 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-template/runtime-benchmarks",
 	"pallet-hello/runtime-benchmarks",
+	"pallet-counter/runtime-benchmarks",
 	# "pallet-bank/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -116,6 +119,7 @@ try-runtime = [
 	"pallet-sudo/try-runtime",
 	"pallet-template/try-runtime",
 	"pallet-hello/try-runtime",
+	"pallet-counter/try-runtime",
 	# "pallet-bank/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
