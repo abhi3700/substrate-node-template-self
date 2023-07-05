@@ -25,9 +25,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime,
-	pallet_prelude::Get,
-	parameter_types,
+	construct_runtime, parameter_types,
 	traits::{
 		ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
 	},
@@ -47,22 +45,8 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-/// Import the bank pallet
-pub use pallet_bank;
-/// Import the counter pallet.
-pub use pallet_counter;
-/// Import the flipper pallet.
-pub use pallet_flipper;
-/// Import the hello pallet.
-pub use pallet_hello;
-/// Import the lockable currency pallet
-pub use pallet_lockable_currency;
 /// Import the template pallet.
 pub use pallet_template;
-/// Import the vault pallet
-pub use pallet_vault;
-/// Import the voting pallet
-pub use pallet_voting;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -142,8 +126,6 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
-
-// max length of a name in voting pallet
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -261,6 +243,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
 	type AccountStore = System;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type HoldIdentifier = ();
+	type MaxHolds = ();
 }
 
 parameter_types! {
@@ -284,64 +270,7 @@ impl pallet_sudo::Config for Runtime {
 /// Configure the pallet-template in pallets/template.
 impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-}
-
-/// Configure the pallet-hello in pallets/hello.
-impl pallet_hello::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
-/// Configure the pallet-flipper in pallets/flipper.
-impl pallet_flipper::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
-/// Configure the pallet-counter in pallets/counter.
-impl pallet_counter::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
-
-parameter_types! {
-	pub const MinFDValue: Balance = 50;
-	pub const MaxFDValue: Balance = 200_000;
-	pub const MinLockValue: Balance = 20;
-	pub const MaxLockValue: Balance = 10_000;
-}
-
-// Configure the pallet-vault in pallets/vault.
-impl pallet_bank::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MyCurrency = Balances;
-	type MinFDValue = MinFDValue;
-	type MaxFDValue = MaxFDValue;
-	type MinLockValue = MinLockValue;
-	type MaxLockValue = MaxLockValue;
-}
-
-/// Configure the pallet-vault in pallets/vault.
-impl pallet_vault::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MyCurrency = Balances;
-}
-
-parameter_types! {
-	pub const MaxProposalLength: u32 = 100;
-	pub const MinProposalLength: u32 = 5;
-}
-
-/// Configure the pallet-voting in pallets/voting.
-impl pallet_voting::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxProposalLength = MaxProposalLength;
-	type MinProposalLength = MinProposalLength;
-}
-
-/// Configure the pallet-lockable-currency in pallets/lockable-currency.
-impl pallet_lockable_currency::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	// Passing in Balances ensures that your pallet's LockableCurrency methods have the same understanding
-	// of Balance than the pallet that handles accounts balances of your blockchain.
-	type StakeCurrency = Balances;
+	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -359,14 +288,8 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
+		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
-		Hello: pallet_hello,
-		Flipper: pallet_flipper,
-		Counter: pallet_counter,
-		Bank: pallet_bank,
-		Vault: pallet_vault,
-		Voting: pallet_voting,
-		LockableCurrency: pallet_lockable_currency,
 	}
 );
 
@@ -414,13 +337,6 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
-		[pallet_hello, Hello]
-		[pallet_flipper, Flipper]
-		[pallet_counter, Counter]
-		[pallet_bank, Bank]
-		[pallet_vault, Vault]
-		[pallet_voting, Voting]
-		[pallet_lockable_currency, LockableCurrency]
 	);
 }
 
@@ -442,6 +358,14 @@ impl_runtime_apis! {
 	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
+		}
+
+		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+			Runtime::metadata_at_version(version)
+		}
+
+		fn metadata_versions() -> sp_std::vec::Vec<u32> {
+			Runtime::metadata_versions()
 		}
 	}
 

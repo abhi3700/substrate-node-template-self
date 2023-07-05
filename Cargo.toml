@@ -2,12 +2,6 @@
 members = [
     "node",
     "pallets/template",
-    "pallets/hello",
-    "pallets/flipper",
-    "pallets/counter",
-    "pallets/bank",
-    "pallets/vault",
-    "pallets/voting",
     "runtime",
 ]
 [profile.release]
