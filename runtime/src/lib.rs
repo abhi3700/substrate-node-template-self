@@ -57,6 +57,9 @@ pub use pallet_hello;
 /// Import the counter pallet.
 pub use pallet_counter;
 
+/// Import the vault pallet.
+pub use pallet_vault;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -282,7 +285,7 @@ impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
-/// Configure the pallet-hello in pallets/template.
+/// Configure the pallet-hello in pallets/hello.
 impl pallet_hello::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_hello::weights::SubstrateWeight<Runtime>;
@@ -292,6 +295,13 @@ impl pallet_hello::Config for Runtime {
 impl pallet_counter::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_counter::weights::SubstrateWeight<Runtime>;
+}
+
+/// Configure the pallet-vault in pallets/vault.
+impl pallet_vault::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_vault::weights::SubstrateWeight<Runtime>;
+	type MyCurrency = Balances;
 }
 
 parameter_types! {
@@ -331,6 +341,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		Hello: pallet_hello,
 		Counter: pallet_counter,
+		Vault: pallet_vault,
 		// Bank: pallet_bank,
 	}
 );
@@ -381,6 +392,7 @@ mod benches {
 		[pallet_template, TemplateModule]
 		[pallet_hello, Hello]
 		[pallet_counter, Counter]
+		[pallet_vault, Vault]
 		// [pallet_bank, Bank]
 	);
 }

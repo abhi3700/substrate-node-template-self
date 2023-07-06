@@ -50,7 +50,9 @@ frame-system-benchmarking = { version = "4.0.0-dev", default-features = false, g
 # Local Dependencies
 pallet-template = { version = "4.0.0-dev", default-features = false, path = "../pallets/template" }
 pallet-hello = { version = "4.0.0-dev", default-features = false, path = "../pallets/hello" }
+pallet-flipper = { version = "4.0.0-dev", default-features = false, path = "../pallets/flipper" }
 pallet-counter = { version = "4.0.0-dev", default-features = false, path = "../pallets/counter" }
+pallet-vault = { version = "4.0.0-dev", default-features = false, path = "../pallets/vault" }
 # pallet-bank = { version = "4.0.0-dev", default-features = false, path = "../pallets/bank" }
 
 [build-dependencies]
@@ -75,7 +77,9 @@ std = [
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-hello/std",
+	"pallet-flipper/std",
 	"pallet-counter/std",
+	"pallet-vault/std",
 	# "pallet-bank/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -103,7 +107,9 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-template/runtime-benchmarks",
 	"pallet-hello/runtime-benchmarks",
+	"pallet-flipper/runtime-benchmarks",
 	"pallet-counter/runtime-benchmarks",
+	"pallet-vault/runtime-benchmarks",
 	# "pallet-bank/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -119,7 +125,9 @@ try-runtime = [
 	"pallet-sudo/try-runtime",
 	"pallet-template/try-runtime",
 	"pallet-hello/try-runtime",
+	"pallet-flipper/try-runtime",
 	"pallet-counter/try-runtime",
+	"pallet-vault/try-runtime",
 	# "pallet-bank/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",

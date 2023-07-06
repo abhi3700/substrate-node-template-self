@@ -2,10 +2,7 @@
 
 ## Overview
 
-The Flipper pallet has these dispatchables:
-
-- `set_value`
-- `flip_value`
+<!-- TODO: Write descriptions for the pallet -->
 
 ## Build
 
@@ -26,7 +23,7 @@ $ cargo build -r
 To run all the tests in a pallet:
 
 ```sh
-$ cargo test -p pallet-hello
+$ cargo test -p pallet-flipper
 ```
 
 ---
@@ -35,10 +32,10 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
+$ cargo test -p pallet-flipper --lib -- tests::it_works_for_default_value
 ```
 
-Although there is a button shown above the test function to run in individual test in VSCode.
+Although there is a button shown above to run individual test in VSCode.
 
 ## Benchmark
 
@@ -57,7 +54,3 @@ In debug mode, run a relaychain node:
 ```sh
 $ RUST_LOG=runtime=debug ./target/release/node-template --dev
 ```
-
-## References
-
-- [rust-crewmates flipper tutorial](https://github.com/rusty-crewmates/substrate-tutorials/tree/main/exercises/ex00-testing)

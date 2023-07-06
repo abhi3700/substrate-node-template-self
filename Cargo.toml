@@ -2,6 +2,12 @@
 members = [
     "node",
     "pallets/template",
+    "pallets/hello",
+    "pallets/flipper",
+    "pallets/counter",
+    "pallets/vault",
+    "pallets/voting",
+    "pallets/lockable-currency",
     "pallets/bank",
     "runtime",
 ]

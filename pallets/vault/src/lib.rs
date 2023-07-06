@@ -47,11 +47,26 @@
 
 pub use pallet::*;
 
+// #[cfg(test)]
+// mod mock;
+
+// #[cfg(test)]
+// mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+pub mod weights;
+pub use weights::*;
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::log;
-	use frame_support::traits::{Currency, ReservableCurrency};
-	use frame_support::{pallet_prelude::*, Blake2_128Concat};
+	use super::*;
+	use frame_support::{
+		log,
+		pallet_prelude::*,
+		traits::{Currency, ReservableCurrency},
+		Blake2_128Concat,
+	};
 	use frame_system::pallet_prelude::*;
 	use scale_info::TypeInfo;
 
@@ -66,6 +81,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// Type representing the weight of this pallet
+		type WeightInfo: WeightInfo;
 		/// MyCurrency type for this pallet. Here, we could have used `Currency` trait.
 		/// But, we need to use `reserved_balance` function which is not available in `Currency` trait.
 		/// That's why `ReservableCurrency` trait is used.
