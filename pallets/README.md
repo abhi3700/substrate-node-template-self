@@ -18,11 +18,11 @@ Pallets are the building blocks of the runtime. They are the modules that implem
   The default weight as `1` for all the users can be updated to any value based on their locked currency.
 
 - [x] [Lockable Currency](./lockable-currency) - A pallet to lock currency (lockable) for a specific period of time.
-- [ ] [Bank](./bank/) - A pallet to transfer currency (reservable, lockable) from one account to another.
 - [ ] [Substrate Kitties]()
 
 ### Real
 
+- [x] [Bank](./bank/) - A pallet to to handle multiple investment types.
 - [ ] AntelopeAccount
   <details>
   <summary>View details:</summary>
@@ -72,7 +72,6 @@ Pallets are the building blocks of the runtime. They are the modules that implem
   </details>
 
 - [ ] DPoS
--
 
 ## Add NEW pallet
 
@@ -136,6 +135,11 @@ $ cargo test -p pallet-hello --lib -- tests::fails_for_wish_start_w_hello
 In order to view the values of the variables in the test function, you can use `println!` macro.
 
 #### 8. Write the benchmarking code for your pallet in the `runtime/src/benchmarks.rs` file. <!-- TODO: -->
+
+## Package NEW pallet
+
+1. `$ cargo publish --dry-run`, to check if everything is fine.
+2. `$ cargo publish`, to publish the pallet to crates.io.
 
 ## Add crate to your pallet
 
