@@ -41,11 +41,17 @@ pub use pallet::*;
 // #[cfg(test)]
 // mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+pub mod weights;
+pub use weights::*;
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::dispatch::Vec;
-	use frame_support::{ensure, pallet_prelude::*};
+	use super::*;
+	use frame_support::{dispatch::Vec, ensure, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -54,6 +60,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// Type representing the weight of this pallet
+		type WeightInfo: WeightInfo;
 
 		// TODO: Research if this macro is required.
 		#[pallet::constant]

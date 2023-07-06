@@ -1,8 +1,8 @@
-# Lockable Currency Pallet
+# LockableCurrency Pallet
 
 ## Overview
 
-Lockable currency pallet is a pallet that allows users to set, extend, and remove locks on their balances.
+<!-- TODO: Write descriptions for the pallet -->
 
 ## Build
 

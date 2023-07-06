@@ -60,6 +60,12 @@ pub use pallet_counter;
 /// Import the vault pallet.
 pub use pallet_vault;
 
+/// Import the voting pallet.
+pub use pallet_voting;
+
+/// Import the voting pallet.
+pub use pallet_lockable_currency;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -304,6 +310,26 @@ impl pallet_vault::Config for Runtime {
 	type MyCurrency = Balances;
 }
 
+/// Configure the pallet-lockable-currency in pallets/lockable_currency.
+impl pallet_lockable_currency::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_lockable_currency::weights::SubstrateWeight<Runtime>;
+	type StakeCurrency = Balances;
+}
+
+parameter_types! {
+	pub const MaxProposalLength: u32 = 50;
+	pub const MinProposalLength: u32 = 10;
+}
+
+/// Configure the pallet-voting in pallets/voting.
+impl pallet_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_voting::weights::SubstrateWeight<Runtime>;
+	type MaxProposalLength = MaxProposalLength;
+	type MinProposalLength = MinProposalLength;
+}
+
 parameter_types! {
 	pub const MinFDValue: Balance = 50;
 	pub const MaxFDValue: Balance = 200_000;
@@ -342,6 +368,8 @@ construct_runtime!(
 		Hello: pallet_hello,
 		Counter: pallet_counter,
 		Vault: pallet_vault,
+		Voting: pallet_voting,
+		LockableCurrency: pallet_lockable_currency,
 		// Bank: pallet_bank,
 	}
 );
@@ -393,6 +421,8 @@ mod benches {
 		[pallet_hello, Hello]
 		[pallet_counter, Counter]
 		[pallet_vault, Vault]
+		[pallet_voting, Voting]
+		[pallet_lockable_currency, LockableCurrency]
 		// [pallet_bank, Bank]
 	);
 }
