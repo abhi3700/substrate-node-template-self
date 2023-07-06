@@ -1,6 +1,6 @@
 [package]
 name = "pallet-counter"
-version = "4.0.0-dev"
+version = "0.1.0"
 description = "FRAME pallet counter to set, increment, decrement, reset, kill storage."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://substrate.io"

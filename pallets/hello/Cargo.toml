@@ -1,6 +1,6 @@
 [package]
 name = "pallet-hello"
-version = "4.0.0-dev"
+version = "0.1.0"
 description = "FRAME pallet hello for saying hello or custom message."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://substrate.io"

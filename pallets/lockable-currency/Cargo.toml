@@ -1,6 +1,6 @@
 [package]
 name = "pallet-lockable-currency"
-version = "4.0.0-dev"
+version = "0.1.0"
 description = "FRAME pallet lockable currency that revolves around LockableCurrency trait."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://substrate.io"

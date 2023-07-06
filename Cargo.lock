@@ -4731,7 +4731,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-bank"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4746,7 +4746,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-counter"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4760,7 +4760,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-flipper"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4797,7 +4797,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-hello"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4811,7 +4811,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-lockable-currency"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4937,7 +4937,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-vault"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4951,7 +4951,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-voting"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

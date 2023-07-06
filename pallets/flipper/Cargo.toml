@@ -1,6 +1,6 @@
 [package]
 name = "pallet-flipper"
-version = "4.0.0-dev"
+version = "0.1.0"
 description = "FRAME pallet flipper that flips the value."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://substrate.io"
