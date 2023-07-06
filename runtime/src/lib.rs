@@ -49,7 +49,7 @@ pub use sp_runtime::{Perbill, Permill};
 pub use pallet_template;
 
 /// Import the bank pallet.
-// pub use pallet_bank;
+pub use pallet_bank;
 
 /// Import the hello pallet.
 pub use pallet_hello;
@@ -335,19 +335,21 @@ parameter_types! {
 	pub const MaxFDValue: Balance = 200_000;
 	pub const MinLockValue: Balance = 20;
 	pub const MaxLockValue: Balance = 10_000;
-	pub const MinFDPeriod: u64 = 5_184_000;	// 1 year
+	pub const MinFDPeriod: u32 = 5_184_000;	// 1 year
 }
 
 // Configure the pallet-bank in pallets/bank.
-// impl pallet_bank::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type WeightInfo = pallet_bank::weights::SubstrateWeight<Runtime>;
-// 	type MyCurrency = Balances;
-// 	type MinFDValue = MinFDValue;
-// 	type MaxFDValue = MaxFDValue;
-// 	type MinLockValue = MinLockValue;
-// 	type MaxLockValue = MaxLockValue;
-// }
+impl pallet_bank::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_bank::weights::SubstrateWeight<Runtime>;
+	type MyCurrency = Balances;
+	type MinFDValue = MinFDValue;
+	type MaxFDValue = MaxFDValue;
+	type MinLockValue = MinLockValue;
+	type MaxLockValue = MaxLockValue;
+	type MinFDPeriod = MinFDPeriod;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -370,7 +372,7 @@ construct_runtime!(
 		Vault: pallet_vault,
 		Voting: pallet_voting,
 		LockableCurrency: pallet_lockable_currency,
-		// Bank: pallet_bank,
+		Bank: pallet_bank,
 	}
 );
 
@@ -423,7 +425,7 @@ mod benches {
 		[pallet_vault, Vault]
 		[pallet_voting, Voting]
 		[pallet_lockable_currency, LockableCurrency]
-		// [pallet_bank, Bank]
+		[pallet_bank, Bank]
 	);
 }
 
