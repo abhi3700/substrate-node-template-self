@@ -92,11 +92,7 @@ fn only_root_can_set_treasury() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_treasury(RuntimeOrigin::root(), TREASURY));
 		System::assert_last_event(
-			Event::TreasurySet {
-				account: TREASURY,
-				block_num: <frame_system::Pallet<Test>>::block_number(),
-			}
-			.into(),
+			Event::TreasurySet { account: TREASURY, block_num: System::block_number() }.into(),
 		)
 	});
 }
@@ -166,12 +162,7 @@ fn open_fd() {
 		// open fd
 		assert_ok!(Bank::open_fd(RuntimeOrigin::signed(ALICE), 100, ONE_YEAR));
 		System::assert_last_event(
-			Event::FDOpened {
-				user: ALICE,
-				amount: 100,
-				block: <frame_system::Pallet<Test>>::block_number(),
-			}
-			.into(),
+			Event::FDOpened { user: ALICE, amount: 100, block: System::block_number() }.into(),
 		);
 
 		// get the post balance
@@ -302,7 +293,7 @@ fn close_fd_wo_maturity() {
 				principal: principal_amt,
 				interest: 0,
 				penalty: penalty_amt,
-				block: <frame_system::Pallet<Test>>::block_number(),
+				block: System::block_number(),
 			}
 			.into(),
 		);
@@ -368,7 +359,7 @@ fn close_fd_w_maturity() {
 				principal: 100,
 				interest: interest_amt,
 				penalty: 0,
-				block: <frame_system::Pallet<Test>>::block_number(),
+				block: System::block_number(),
 			}
 			.into(),
 		);
@@ -459,5 +450,23 @@ fn lock_valid_amt_for_membership() {
 }
 
 //=====unlock=====
+/// 🧍 -> lock 21 (≥ min., < free) ✅
+/// 🧍 -> lock 100_000 (≤ max., > free) ✅
 #[test]
-fn unlock() {}
+fn unlock_works_when_locked_successfully() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Balances::free_balance(&ALICE), 10_000);
+		assert_ok!(Bank::lock_for_membership(RuntimeOrigin::signed(ALICE), 21));
+		System::assert_last_event(
+			Event::LockedForMembership { user: ALICE, amount: 21, block: System::block_number() }
+				.into(),
+		);
+
+		assert_ok!(Bank::unlock_for_membership(RuntimeOrigin::signed(ALICE)));
+		System::assert_last_event(
+			Event::UnlockedForMembership { user: ALICE, block: System::block_number() }.into(),
+		);
+		assert_eq!(Balances::free_balance(&ALICE), 10_000); // no change
+		assert_ok!(Balances::transfer(RuntimeOrigin::signed(ALICE), BOB, 10_000)); // transfer 10_000 (all)
+	});
+}

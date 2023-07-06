@@ -1,9 +1,9 @@
 [package]
 name = "pallet-bank"
-version = "0.1.0"
+version = "0.1.1"
 description = "FRAME pallet bank for handling different investment types."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
-homepage = "https://substrate.io"
+homepage = "https://github.com/abhi3700/substrate-playground/pallets/bank"
 edition = "2021"
 license = "MIT-0"
 publish = true

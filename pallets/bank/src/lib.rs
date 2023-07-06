@@ -436,13 +436,6 @@ pub mod pallet {
 				// & transfer the (principal_amount + interest) from the treasury account to the FD holder;
 				// else transfer the amount only from the treasury account to the caller
 				// calculate the interest directly
-				// let interest = principal_amount
-				// 	.checked_mul(&interest_rate.into())
-				// 	.and_then(|v| v.checked_mul(&maturity_period.into()))
-				// 	.and_then(|v| v.checked_div(&fd_epoch.into()))
-				// 	.and_then(|v| v.checked_div(&scaling_factor.into()))
-				// 	.ok_or("Interest calculation failed")?;
-
 				let interest = principal_amount
 					.checked_mul(&Self::u32_to_balance(interest_rate).unwrap())
 					.and_then(|v| v.checked_mul(&maturity_period.into()))
