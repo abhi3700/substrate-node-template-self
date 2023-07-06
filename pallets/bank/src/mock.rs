@@ -19,7 +19,7 @@ pub const CHARLIE: u64 = 3;
 pub const DAVE: u64 = 4;
 pub const TREASURY: u64 = 100;
 
-pub const ONE_YEAR: u64 = 5_184_000;
+pub const ONE_YEAR: u32 = 5_184_000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -83,7 +83,7 @@ parameter_types! {
 	pub const MaxFDValue: <Test as pallet_balances::Config>::Balance = 200_000;
 	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
 	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
-	pub const MinFDPeriod: u64 = ONE_YEAR;
+	pub const MinFDPeriod: u32 = ONE_YEAR;
 }
 
 impl pallet_bank::Config for Test {

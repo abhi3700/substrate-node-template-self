@@ -1,7 +1,6 @@
 //! # Bank Pallet
 //!
-//! A simple pallet demonstrating the usage of `ReservableCurrency`,
-//! `NamedReservableCurrency`, `Lockable` traits.
+//! A pallet for handling accounts and balances & different types of deposits based on
 //!
 //! - [`Config`]
 //! - [`Call`]
@@ -25,8 +24,6 @@
 //! The interest comes from a treasury 💎 account which is funded by the root origin.
 //!
 //! NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain.
-//!
-//!
 //!
 //! ## Interface
 //!
@@ -52,6 +49,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// TODO: add benchmarking & weights
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod weights;
@@ -115,7 +113,7 @@ pub mod pallet {
 
 		// in blocks
 		#[pallet::constant]
-		type MinFDPeriod: Get<u64>;
+		type MinFDPeriod: Get<u32>;
 	}
 
 	#[pallet::storage]
@@ -147,20 +145,20 @@ pub mod pallet {
 	// last FD User IDs for each user, except 0
 	// User --> (fd_user_last_id, investment_score)
 	pub type FDUserDetails<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, (u32, u128), ValueQuery>;
+		StorageMap<_, Blake2_128Concat, T::AccountId, (u32, u16), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn fd_vault)]
 	// NOTE: can also use `AccountOf<T>` instead of `T::AccountId` here.
-	// user -> id -> (amount, opened_at_block_number, expiry_duration)
-	// NOTE: Normally, expiry_duration is 5 years.
+	// user -> id -> (amount, opened_at_block_number, maturity_period_in_blocks)
+	// NOTE: Normally, maturity_period is 5 years.
 	pub type FDVaults<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		T::AccountId,
 		Blake2_128Concat,
 		u32,
-		(BalanceOf<T>, T::BlockNumber, u64),
+		(BalanceOf<T>, T::BlockNumber, u32),
 		// ValuQuery, // optional
 	>;
 
@@ -257,17 +255,7 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T>
-	// NOTE: Here, `where` clause is required for converting from
-	// - `BlockNumber` to `BalanceOf<T>`
-	// - `u128` to `BalanceOf<T>`
-	// - `u64` to `T::BlockNumber`
-	// - `u64` to `T::BlockNumber`
-	// automatically suggested by compiler.
-	where
-		BalanceOf<T>: From<T::BlockNumber> + From<u128> + From<u64>,
-		T::BlockNumber: From<u64>,
-	{
+	impl<T: Config> Pallet<T> {
 		/// Set FD Interest Rate, Scaling Factor, Per_Duration (EPOCH)
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_fd_interest_rate())]
@@ -348,7 +336,7 @@ pub mod pallet {
 		pub fn open_fd(
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
-			maturity_period: u64,
+			maturity_period: u32,
 		) -> DispatchResult {
 			// ensure signed origin
 			let user = ensure_signed(origin)?;
@@ -364,7 +352,7 @@ pub mod pallet {
 
 			// ensure the maturity_period is greater than fd_epoch at least
 			ensure!(
-				maturity_period >= FDParams::<T>::get().unwrap().2 as u64,
+				maturity_period >= FDParams::<T>::get().unwrap().2,
 				Error::<T>::FDMaturityMustBeGreaterThanFDEpoch
 			);
 
@@ -448,8 +436,15 @@ pub mod pallet {
 				// & transfer the (principal_amount + interest) from the treasury account to the FD holder;
 				// else transfer the amount only from the treasury account to the caller
 				// calculate the interest directly
+				// let interest = principal_amount
+				// 	.checked_mul(&interest_rate.into())
+				// 	.and_then(|v| v.checked_mul(&maturity_period.into()))
+				// 	.and_then(|v| v.checked_div(&fd_epoch.into()))
+				// 	.and_then(|v| v.checked_div(&scaling_factor.into()))
+				// 	.ok_or("Interest calculation failed")?;
+
 				let interest = principal_amount
-					.checked_mul(&interest_rate.into())
+					.checked_mul(&Self::u32_to_balance(interest_rate).unwrap())
 					.and_then(|v| v.checked_mul(&maturity_period.into()))
 					.and_then(|v| v.checked_div(&fd_epoch.into()))
 					.and_then(|v| v.checked_div(&scaling_factor.into()))
@@ -463,6 +458,10 @@ pub mod pallet {
 					T::MyCurrency::free_balance(&treasury) > interest,
 					Error::<T>::InsufficientFreeBalanceForInterest
 				);
+
+				// TODO: Calculate the Investment Score (IS) for the user
+				// Investment Score (IS) = 1000 * log10(1 + (A/D)), Here,
+				// let investment_score = Self::calculate_investment_score(&user, &interest);
 
 				// transfer the interest from the treasury account to the user
 				let _ = T::MyCurrency::transfer(&treasury, &user, interest, AllowDeath);
@@ -577,6 +576,16 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		//function to convert balance to u32
+		pub fn balance_to_u32(input: BalanceOf<T>) -> Option<u32> {
+			TryInto::<u32>::try_into(input).ok()
+		}
+
+		// NOTE: prefer this to avoid truncating during arithmetic operations
+		pub fn u32_to_balance(input: u32) -> Option<BalanceOf<T>> {
+			TryInto::<BalanceOf<T>>::try_into(input).ok()
+		}
+
 		pub fn get_fd_params() -> (u32, u32, u32, u32) {
 			let (interest_rate, scaling_factor, fd_epoch, penalty_rate) =
 				FDParams::<T>::get().unwrap();
@@ -584,7 +593,8 @@ pub mod pallet {
 			(interest_rate, scaling_factor, fd_epoch, penalty_rate)
 		}
 
-		pub fn get_investment_score(user: &T::AccountId) -> u128 {
+		// As per the plan the IS ∈ [0, 1000) following Log curve (increasing) ⎛
+		pub fn get_investment_score(user: &T::AccountId) -> u16 {
 			let (_, investment_score) = FDUserDetails::<T>::get(user);
 			investment_score
 		}
@@ -593,14 +603,14 @@ pub mod pallet {
 		pub fn get_fd_vault_details(
 			user: &T::AccountId,
 			id: u32,
-		) -> Result<(BalanceOf<T>, T::BlockNumber, u64), DispatchError> {
+		) -> Result<(BalanceOf<T>, T::BlockNumber, u32), DispatchError> {
 			let (principal_amount, opened_at_block_number, expiry_duration) =
 				FDVaults::<T>::get(user, id).ok_or(Error::<T>::FDVaultDoesNotExist)?;
 			Ok((principal_amount, opened_at_block_number, expiry_duration))
 		}
 
 		// TODO: Create public function for SDK use case
-		// pub fn get_interest(principal_amount: BalanceOf<T>, interest_rate: u32, scaling_factor: u32, fd_epoch: u32, maturity_period: ) {}
+		// pub fn get_interest(principal_amount: BalanceOf<T>, interest_rate: u32, scaling_factor: u32, fd_epoch: u32, maturity_period: u32) {}
 
 		// TODO: Create public function for SDK use case
 		// pub fn get_penalty(principal_amount: BalanceOf<T>, penalty_rate: u32, scaling_factor: u32, fd_epoch: u32) {}

@@ -1,17 +1,18 @@
 use crate::{mock::*, Error, Event};
 use frame_support::{assert_noop, assert_ok};
+
 use sp_runtime::{
 	DispatchError::{BadOrigin, Token},
 	TokenError::Frozen,
 };
 
 // Block wise assumptions for corresponding time, assuming 1 BLOCK = 6 seconds
-const ONE_DAY: u64 = 14_400;
-const ONE_MONTH: u64 = 432_000;
-const ONE_QUARTER_YEAR: u64 = 1_296_000;
-const HALF_YEAR: u64 = 2_592_000;
-const THREE_QUARTER_YEAR: u64 = 3_888_000;
-const ONE_YEAR: u64 = 5_184_000;
+const ONE_DAY: u32 = 14_400;
+const ONE_MONTH: u32 = 432_000;
+const ONE_QUARTER_YEAR: u32 = 1_296_000;
+const HALF_YEAR: u32 = 2_592_000;
+const THREE_QUARTER_YEAR: u32 = 3_888_000;
+const ONE_YEAR: u32 = 5_184_000;
 
 const INTEREST: u32 = 8_000; // 8%
 const SCALING_FACTOR: u32 = 100_000; // 100%
@@ -272,7 +273,7 @@ fn close_fd_wo_maturity() {
 		assert_ok!(Bank::open_fd(RuntimeOrigin::signed(ALICE), 100, ONE_YEAR));
 
 		// set the block number to (3/4)th year worth of blocks
-		System::set_block_number(THREE_QUARTER_YEAR);
+		System::set_block_number(THREE_QUARTER_YEAR as u64);
 
 		// get the pre balance
 		let pre_balance = Balances::free_balance(&ALICE);
@@ -339,7 +340,7 @@ fn close_fd_w_maturity() {
 		let maturity_period = ONE_YEAR;
 
 		// set the block number to 62
-		System::set_block_number(maturity_period + 1);
+		System::set_block_number((maturity_period + 1) as u64);
 
 		// get the pre balance
 		let pre_balance = Balances::free_balance(&ALICE);
