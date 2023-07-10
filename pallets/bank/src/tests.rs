@@ -1,10 +1,13 @@
 use crate::{mock::*, Error, Event};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, sp_runtime::Permill};
 
 use sp_runtime::{
 	DispatchError::{BadOrigin, Token},
 	TokenError::Frozen,
 };
+
+// suppress warnings for declared variables, but not used.
+#[allow(unused_variables)]
 
 // Block wise assumptions for corresponding time, assuming 1 BLOCK = 6 seconds
 const ONE_DAY: u32 = 14_400;
@@ -14,10 +17,9 @@ const HALF_YEAR: u32 = 2_592_000;
 const THREE_QUARTER_YEAR: u32 = 3_888_000;
 const ONE_YEAR: u32 = 5_184_000;
 
-const INTEREST: u32 = 8_000; // 8%
-const SCALING_FACTOR: u32 = 100_000; // 100%
-const FD_EPOCH: u32 = ONE_YEAR as u32; // 1 year
-const PENALTY: u32 = 500; // 0.5%
+const INTEREST_RATE: Permill = Permill::from_percent(8); // 8%	or Permill::from_parts(80_000)
+const FD_EPOCH: u32 = ONE_YEAR; // 1 year
+const PENALTY_RATE: Permill = Permill::from_parts(5_000); // 0.5%, NOTE: can't represent 0.5 inside parenthesis.
 
 //=====getters=====
 
@@ -52,17 +54,15 @@ fn only_root_can_set_fd_interest_rate() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 		System::assert_last_event(
 			Event::FDParamsSet {
-				interest: INTEREST,
-				scaling_factor: SCALING_FACTOR,
+				interest_rate: INTEREST_RATE,
+				penalty_rate: PENALTY_RATE,
 				fd_epoch: FD_EPOCH,
-				penalty: PENALTY,
 			}
 			.into(),
 		)
@@ -76,10 +76,9 @@ fn others_cant_set_fd_interest_rate() {
 		assert_noop!(
 			Bank::set_fd_interest_rate(
 				RuntimeOrigin::signed(ALICE),
-				INTEREST,
-				SCALING_FACTOR,
+				INTEREST_RATE,
+				PENALTY_RATE,
 				FD_EPOCH,
-				PENALTY
 			),
 			BadOrigin
 		);
@@ -116,6 +115,26 @@ fn open_fd_fail_for_zero_amount() {
 }
 
 #[test]
+fn open_fd_fail_when_amount_less_than_min_fd_amt() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			Bank::open_fd(RuntimeOrigin::signed(ALICE), MinFDAmount::get() - 1, ONE_YEAR),
+			Error::<Test>::FDAmountOutOfRangeWhenOpening
+		);
+	});
+}
+
+#[test]
+fn open_fd_fail_when_amount_more_than_max_fd_amt() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			Bank::open_fd(RuntimeOrigin::signed(ALICE), MaxFDAmount::get() + 1, ONE_YEAR),
+			Error::<Test>::FDAmountOutOfRangeWhenOpening
+		);
+	});
+}
+
+#[test]
 fn open_fd_fail_when_treasury_not_set() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(Bank::treasury(), None);
@@ -144,10 +163,9 @@ fn open_fd() {
 		// set interest details
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 
 		// set treasury
@@ -207,10 +225,9 @@ fn close_fd_fails_when_treasury_not_set() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 		assert_ok!(Bank::set_treasury(RuntimeOrigin::root(), TREASURY));
 		assert_ok!(Bank::open_fd(RuntimeOrigin::signed(ALICE), 100, ONE_YEAR));
@@ -232,10 +249,9 @@ fn close_fd_fails_for_invalid_user() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 		assert_ok!(Bank::set_treasury(RuntimeOrigin::root(), TREASURY));
 		assert_ok!(Bank::open_fd(RuntimeOrigin::signed(ALICE), 100, ONE_YEAR));
@@ -254,10 +270,9 @@ fn close_fd_wo_maturity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 
 		assert_ok!(Bank::set_treasury(RuntimeOrigin::root(), TREASURY));
@@ -275,11 +290,8 @@ fn close_fd_wo_maturity() {
 		let principal_amt: u128 = 100;
 
 		// calculate the penalty
-		let (_, scaling_factor, fd_epoch, penalty_rate) = Bank::get_fd_params();
-		let mut penalty_amt = principal_amt
-			.checked_mul(penalty_rate as u128)
-			.and_then(|p| p.checked_div(scaling_factor as u128))
-			.unwrap();
+		let (_, penalty_rate, _) = Bank::get_fd_params();
+		let mut penalty_amt = penalty_rate * principal_amt;
 		if penalty_amt == 0 {
 			penalty_amt = 1;
 		}
@@ -320,10 +332,9 @@ fn close_fd_w_maturity() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Bank::set_fd_interest_rate(
 			RuntimeOrigin::root(),
-			INTEREST,
-			SCALING_FACTOR,
+			INTEREST_RATE,
+			PENALTY_RATE,
 			FD_EPOCH,
-			PENALTY
 		));
 		assert_ok!(Bank::set_treasury(RuntimeOrigin::root(), TREASURY));
 		assert_ok!(Bank::open_fd(RuntimeOrigin::signed(ALICE), 100, ONE_YEAR));
@@ -342,11 +353,10 @@ fn close_fd_w_maturity() {
 		let principal_amt: u128 = 100;
 
 		// calculate the interest
-		let (interest_rate, scaling_factor, fd_epoch, _) = Bank::get_fd_params();
-		let interest_amt = principal_amt
-			.checked_mul(interest_rate as u128)
-			.and_then(|i| i.checked_mul(maturity_period as u128))
-			.and_then(|i| i.checked_div(scaling_factor as u128))
+		let (interest_rate, _, fd_epoch) = Bank::get_fd_params();
+		let annual_interest_amt = interest_rate * principal_amt;
+		let tot_interest_amt = annual_interest_amt
+			.checked_mul(maturity_period as u128)
 			.and_then(|i| i.checked_div(fd_epoch as u128))
 			.unwrap();
 
@@ -357,7 +367,7 @@ fn close_fd_w_maturity() {
 				maturity: true,
 				user: ALICE,
 				principal: 100,
-				interest: interest_amt,
+				interest: tot_interest_amt,
 				penalty: 0,
 				block: System::block_number(),
 			}
@@ -368,7 +378,7 @@ fn close_fd_w_maturity() {
 		let post_balance = Balances::free_balance(&ALICE);
 
 		// check the post balance if increased by the FD amount
-		assert_eq!(post_balance - pre_balance, 100 + interest_amt);
+		assert_eq!(post_balance - pre_balance, 100 + tot_interest_amt);
 		// assert!(post_balance > pre_balance);
 
 		// check the reserved balance of user is zero
@@ -376,7 +386,7 @@ fn close_fd_w_maturity() {
 
 		// check the treasury post balance if increased by the interest
 		let treasury_post_balance = Balances::free_balance(&TREASURY);
-		assert_eq!(treasury_pre_balance - treasury_post_balance, interest_amt);
+		assert_eq!(treasury_pre_balance - treasury_post_balance, tot_interest_amt);
 	});
 }
 

@@ -79,8 +79,8 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinFDValue: <Test as pallet_balances::Config>::Balance = 50;
-	pub const MaxFDValue: <Test as pallet_balances::Config>::Balance = 200_000;
+	pub const MinFDAmount: <Test as pallet_balances::Config>::Balance = 50;
+	pub const MaxFDAmount: <Test as pallet_balances::Config>::Balance = 200_000;
 	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
 	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
 	pub const MinFDPeriod: u32 = ONE_YEAR;
@@ -90,8 +90,8 @@ impl pallet_bank::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type MyCurrency = Balances;
-	type MinFDValue = MinFDValue;
-	type MaxFDValue = MaxFDValue;
+	type MinFDAmount = MinFDAmount;
+	type MaxFDAmount = MaxFDAmount;
 	type MinLockValue = MinLockValue;
 	type MaxLockValue = MaxLockValue;
 	type MinFDPeriod = MinFDPeriod;

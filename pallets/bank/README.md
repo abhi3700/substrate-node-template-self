@@ -1,25 +1,38 @@
 # Bank Pallet
 
+A pallet for handling financial systems of investment, loans, etc.
+
+- [`Config`]
+- [`Call`]
+
 ## Overview
 
-Anyone can open FD (Fixed Deposit) by reserving some amount of currency.
+Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period.
 
 During the FD period, the reserved amount cannot be used that's why need to be freed from the `free_balance`.
-In order to receive interest, FD can only be closed after the `MinFDPeriod` is elapsed, else the reserved amount is returned
-to the user without any interest as per the premature withdrawal facility. The penalty (0.5-1%) is stored & set by the root origin.
+In order to receive interest, FD can only be closed after the `fd_epoch` (set by admin) is elapsed, else the reserved amount is returned
+to the user without any interest as per the premature withdrawal facility and a penalty (0.5-1%) is charged. The `penalty_rate` is data
+persistent & set by the root origin.
 
-But, if the FD is closed after `MinFDPeriod`, then the reserved amount is returned to the user with
-some interest. The interest is stored & set by the root origin.
+But, if the FD is closed after individual FD vault's `maturity_period` (set during opening), then the reserved amount is returned to the user with
+accrued interest. The `interest_rate` is stored & set by the root origin.
 
-TODO:
+The accrued interest comes from a treasury 💎 account which is funded by the root origin. And the treasury account is funded via network's
+inflation or balance slashing of the user in case of malicious activity.
 
-- [ ] We can also add the functionality of auto_maturity of FDs using hooks.
-- [ ] After every few blocks, some balance is transferred to the TREASURY account.
-  - L0 chain's inflation is transferred to the TREASURY account.
+NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain. It has been
+shown as a [dev-dependencies] in the `Cargo.toml` file.
 
-The interest comes from a treasury 💎 account which is funded by the root origin.
+## Interface
 
-NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain.
+### Dispatchable Functions
+
+- `set_fd_interest_rate`
+- `set_treasury`
+- `open_fd`
+- `close_fd`
+- `lock_for_membership`
+- `unlock_for_membership`
 
 ## Build
 

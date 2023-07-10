@@ -55,7 +55,8 @@ pallet-counter = { version = "0.1.0", default-features = false, path = "../palle
 pallet-vault = { version = "0.1.0", default-features = false, path = "../pallets/vault" }
 pallet-voting = { version = "0.1.0", default-features = false, path = "../pallets/voting" }
 pallet-lockable-currency = { version = "0.1.0", default-features = false, path = "../pallets/lockable-currency" }
-pallet-bank = { version = "0.1.0", default-features = false, path = "../pallets/bank" }
+pallet-bank = { version = "0.1.1", default-features = false, path = "../pallets/bank" }
+pallet-arithmetic = { version = "0.1.0", default-features = false, path = "../pallets/arithmetic" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", optional = true , branch = "polkadot-v0.9.42" }
@@ -85,6 +86,7 @@ std = [
 	"pallet-voting/std",
 	"pallet-lockable-currency/std",
 	"pallet-bank/std",
+	"pallet-arithmetic/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -117,6 +119,7 @@ runtime-benchmarks = [
 	"pallet-voting/runtime-benchmarks",
 	"pallet-lockable-currency/runtime-benchmarks",
 	"pallet-bank/runtime-benchmarks",
+	"pallet-arithmetic/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
@@ -137,6 +140,7 @@ try-runtime = [
 	"pallet-voting/try-runtime",
 	"pallet-lockable-currency/try-runtime",
 	"pallet-bank/try-runtime",
+	"pallet-arithmetic/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 ]

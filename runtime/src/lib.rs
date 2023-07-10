@@ -66,6 +66,9 @@ pub use pallet_voting;
 /// Import the voting pallet.
 pub use pallet_lockable_currency;
 
+/// Import the arithmetic pallet.
+pub use pallet_arithmetic;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -331,8 +334,8 @@ impl pallet_voting::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinFDValue: Balance = 50;
-	pub const MaxFDValue: Balance = 200_000;
+	pub const MinFDAmount: Balance = 50;
+	pub const MaxFDAmount: Balance = 200_000;
 	pub const MinLockValue: Balance = 20;
 	pub const MaxLockValue: Balance = 10_000;
 	pub const MinFDPeriod: u32 = 5_184_000;	// 1 year
@@ -343,11 +346,17 @@ impl pallet_bank::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_bank::weights::SubstrateWeight<Runtime>;
 	type MyCurrency = Balances;
-	type MinFDValue = MinFDValue;
-	type MaxFDValue = MaxFDValue;
+	type MinFDAmount = MinFDAmount;
+	type MaxFDAmount = MaxFDAmount;
 	type MinLockValue = MinLockValue;
 	type MaxLockValue = MaxLockValue;
 	type MinFDPeriod = MinFDPeriod;
+}
+
+/// Configure the pallet-counter in pallets/counter.
+impl pallet_arithmetic::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_arithmetic::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -373,6 +382,7 @@ construct_runtime!(
 		Voting: pallet_voting,
 		LockableCurrency: pallet_lockable_currency,
 		Bank: pallet_bank,
+		Arithmetic: pallet_arithmetic,
 	}
 );
 
@@ -426,6 +436,7 @@ mod benches {
 		[pallet_voting, Voting]
 		[pallet_lockable_currency, LockableCurrency]
 		[pallet_bank, Bank]
+		[pallet_arithmetic, Arithmetic]
 	);
 }
 

@@ -1,36 +1,31 @@
 //! # Bank Pallet
 //!
-//! A pallet for handling accounts and balances & different types of deposits based on
+//! A pallet for handling financial systems of investment, loans, etc.
 //!
 //! - [`Config`]
 //! - [`Call`]
 //!
 //! ## Overview
 //!
-//! Anyone can open FD (Fixed Deposit) by reserving some amount of currency.
+//! Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period.
 //!
 //! During the FD period, the reserved amount cannot be used that's why need to be freed from the `free_balance`.
-//! In order to receive interest, FD can only be closed after the `MinFDPeriod` is elapsed, else the reserved amount is returned
-//! to the user without any interest as per the premature withdrawal facility. The penalty (0.5-1%) is stored & set by the root origin.
+//! In order to receive interest, FD can only be closed after the `fd_epoch` (set by admin) is elapsed, else the reserved amount is returned
+//! to the user without any interest as per the premature withdrawal facility and a penalty (0.5-1%) is charged. The `penalty_rate` is data
+//! persistent & set by the root origin.
 //!
-//! But, if the FD is closed after `MinFDPeriod`, then the reserved amount is returned to the user with
-//! some interest. The interest is stored & set by the root origin.
+//! But, if the FD is closed after individual FD vault's `maturity_period` (set during opening), then the reserved amount is returned to the user with
+//! accrued interest. The `interest_rate` is stored & set by the root origin.
 //!
-//! TODO:
-//! - [ ] We can also add the functionality of auto_maturity of FDs using hooks.
-//! - [ ] After every few blocks, some balance is transferred to the TREASURY account.
-//! 	- L0 chain's inflation is transferred to the TREASURY account.
+//! The accrued interest comes from a treasury 💎 account which is funded by the root origin. And the treasury account is funded via network's
+//! inflation or balance slashing of the user in case of malicious activity.
 //!
-//! The interest comes from a treasury 💎 account which is funded by the root origin.
-//!
-//! NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain.
+//! NOTE: The runtime must include the `Balances` pallet to handle the accounts and balances for your chain. It has been
+//! shown as a [dev-dependencies] in the `Cargo.toml` file.
 //!
 //! ## Interface
 //!
 //! ### Dispatchable Functions
-//!
-//! TODO: set interest rate, blocks limit in the runtime's next immediate
-//! block after the pallet deployment. Can be done by Root or Inherent or something else.
 //!
 //! - `set_fd_interest_rate`
 //! - `set_treasury`
@@ -66,8 +61,8 @@ pub mod pallet {
 		log,
 		pallet_prelude::*,
 		sp_runtime::{
-			traits::{CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-			DispatchError,
+			traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+			DispatchError, FixedU128, Permill,
 		},
 		traits::{
 			Currency, ExistenceRequirement::AllowDeath, LockIdentifier, LockableCurrency,
@@ -100,10 +95,10 @@ pub mod pallet {
 			+ NamedReservableCurrency<Self::AccountId>;
 
 		#[pallet::constant]
-		type MinFDValue: Get<BalanceOf<Self>>;
+		type MinFDAmount: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type MaxFDValue: Get<BalanceOf<Self>>;
+		type MaxFDAmount: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type MinLockValue: Get<BalanceOf<Self>>;
@@ -118,22 +113,18 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fd_params)]
-	// in percentage i.e. 0.5% = 0.005 => represented as 1e5 (scaling_factor) => 500
-	// NOTE: We can put this scaling factor as high as possible i.e. 1e18,
+	// in percentage i.e. 0.5% = 0.005 => represented as 1e6 (scaling_factor using Permill) => 5_000
+	// NOTE: We can put this scaling factor as high as possible i.e. 1e9 (scaling_factor using Perbill)
 	// but then during division it would lose the precision. Hence, choose as small as possible.
-	// Hence, keep the scaling_factor as low as possible.
-	// make sure during arithmetic, you divide by 1e5
+	// Hence, keep the scaling_factor as low as possible. Now, one can directly multiply the rate (interest/penalty) with the amount.
 	//
-	// E.g. If the interest rate is 0.005% per year, then the interest (in decimal * scaling_factor) is 0.005e5 = 500
-	// If the interest rate is 10%, then the interest set here as (0.1 * 1e5) = 10_000
+	// E.g. If the interest rate is 0.005% per year, then the interest (in decimal * scaling_factor) is 0.005e6 = 5000
+	// If the interest rate is 10%, then the interest set here as (0.1 * 1e6) = 100_000
 	//
-	// (u32, u32, u32, u32) tuple represents (interest, scaling_factor, fd_epoch, penalty)
-	// NOTE: type of `interest` has been kept as `u32` covering the whole range of possible percentages as high as 10%
-	// & as low as 0.00001%
-	// It is recommended to set the scaling factor 1e5 in general.
-	// `fd_epoch` is the duration in blocks for which the interest is applicable like 8% per year. So, here 8% is the interest
-	// & 1 year is the `fd_epoch`.
-	pub type FDParams<T: Config> = StorageValue<_, (u32, u32, u32, u32)>;
+	// (u32, u32, u32, u32) tuple represents (interest_rate, penalty_rate, fd_epoch)
+	// `fd_epoch` is the duration in blocks for which the interest is applicable like 8% per year (this is the fd_epoch whether
+	// it should be a year or 2). So, here 8% is the interest per fd_epoch. Normally it should be 1 year.
+	pub type FDParams<T: Config> = StorageValue<_, (Permill, Permill, u32)>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn treasury)]
@@ -165,8 +156,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Set FD Interest Rate & Scaling Factor
-		FDParamsSet { interest: u32, scaling_factor: u32, fd_epoch: u32, penalty: u32 },
+		/// Set FD Interest Rate, Penalty Rate, FD Epoch
+		FDParamsSet { interest_rate: Permill, penalty_rate: Permill, fd_epoch: u32 },
 
 		/// Treasury account set
 		TreasurySet { account: T::AccountId, block_num: T::BlockNumber },
@@ -209,7 +200,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Zero Interest Rate
-		ZeroInterestRate,
+		ZeroFDInterestRate,
 		/// Zero Scaling Factor
 		ZeroScalingFactor,
 		/// Zero FD Epoch
@@ -252,6 +243,8 @@ pub mod pallet {
 		LockAmountIsLessThanMinLockAmount,
 		/// Lock Amount is Greater Than Max Lock Amount
 		LockAmountExceedsMaxLockAmount,
+		/// FD Amount Out Of Range When Opening
+		FDAmountOutOfRangeWhenOpening,
 	}
 
 	#[pallet::call]
@@ -261,31 +254,27 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_fd_interest_rate())]
 		pub fn set_fd_interest_rate(
 			origin: OriginFor<T>,
-			interest: u32,
-			scaling_factor: u32,
+			interest_rate: Permill,
+			penalty_rate: Permill,
 			fd_epoch: u32,
-			penalty: u32,
 		) -> DispatchResult {
 			// ensure the root origin signed
 			ensure_root(origin)?;
 
 			// ensure positive interest
-			ensure!(interest > 0, Error::<T>::ZeroInterestRate);
+			ensure!(interest_rate > Permill::zero(), Error::<T>::ZeroFDInterestRate);
 
-			// ensure scaling factor is not zero
-			ensure!(scaling_factor > 0, Error::<T>::ZeroScalingFactor);
+			// ensure penalty is not zero
+			ensure!(penalty_rate > Permill::zero(), Error::<T>::ZeroFDPenalty);
 
 			// ensure per duration is not zero
 			ensure!(fd_epoch > 0, Error::<T>::ZeroFDEpoch);
 
-			// ensure penalty is not zero
-			ensure!(penalty > 0, Error::<T>::ZeroFDPenalty);
-
 			// set the FD params
-			FDParams::<T>::put((interest, scaling_factor, fd_epoch, penalty));
+			FDParams::<T>::put((interest_rate, penalty_rate, fd_epoch));
 
 			// emit the event
-			Self::deposit_event(Event::FDParamsSet { interest, scaling_factor, fd_epoch, penalty });
+			Self::deposit_event(Event::FDParamsSet { interest_rate, penalty_rate, fd_epoch });
 
 			Ok(())
 		}
@@ -343,6 +332,12 @@ pub mod pallet {
 
 			// ensure the amount is not zero
 			ensure!(amount > Zero::zero(), Error::<T>::ZeroAmountWhenOpeningFD);
+
+			// ensure that the amount is within the range of min. & max. FD value
+			ensure!(
+				amount >= T::MinFDAmount::get() && amount <= T::MaxFDAmount::get(),
+				Error::<T>::FDAmountOutOfRangeWhenOpening
+			);
 
 			// ensure the treasury is set
 			ensure!(Treasury::<T>::get().is_some(), Error::<T>::TreasuryNotSet);
@@ -413,7 +408,7 @@ pub mod pallet {
 			let treasury = <Treasury<T>>::get().ok_or(Error::<T>::TreasuryNotSet)?;
 
 			// get the interest if exists
-			let (interest_rate, scaling_factor, fd_epoch, penalty_rate) =
+			let (interest_rate, penalty_rate, fd_epoch) =
 				FDParams::<T>::get().ok_or(Error::<T>::FDInterestNotSet)?;
 
 			// get the current block number
@@ -436,19 +431,15 @@ pub mod pallet {
 				// & transfer the (principal_amount + interest) from the treasury account to the FD holder;
 				// else transfer the amount only from the treasury account to the caller
 				// calculate the interest directly
-				let interest = principal_amount
-					.checked_mul(&Self::u32_to_balance(interest_rate).unwrap())
-					.and_then(|v| v.checked_mul(&maturity_period.into()))
-					.and_then(|v| v.checked_div(&fd_epoch.into()))
-					.and_then(|v| v.checked_div(&scaling_factor.into()))
-					.ok_or("Interest calculation failed")?;
+				let total_interest =
+					Self::get_interest(principal_amount, interest_rate, fd_epoch, maturity_period)?;
 
-				log::info!(target: TARGET, "Interest: {:?}", interest);
+				log::info!(target: TARGET, "Interest: {:?}", total_interest);
 				// println!("Interest on post-mature withdrawal: {:?}", interest); // for testing only
 
 				// check the treasury's free_balance is greater than the interest
 				ensure!(
-					T::MyCurrency::free_balance(&treasury) > interest,
+					T::MyCurrency::free_balance(&treasury) > total_interest,
 					Error::<T>::InsufficientFreeBalanceForInterest
 				);
 
@@ -457,7 +448,7 @@ pub mod pallet {
 				// let investment_score = Self::calculate_investment_score(&user, &interest);
 
 				// transfer the interest from the treasury account to the user
-				let _ = T::MyCurrency::transfer(&treasury, &user, interest, AllowDeath);
+				let _ = T::MyCurrency::transfer(&treasury, &user, total_interest, AllowDeath);
 
 				// remove the FD details from the storage for the user
 				<FDVaults<T>>::remove(&user, id);
@@ -470,7 +461,7 @@ pub mod pallet {
 					maturity: true,
 					user,
 					principal: principal_amount,
-					interest,
+					interest: total_interest,
 					penalty: Zero::zero(),
 					block: current_block_num,
 				});
@@ -478,14 +469,8 @@ pub mod pallet {
 				Ok(())
 			} else if staked_duration < maturity_period.into() && has_matured == 0 {
 				// calculate the penalty
-				let mut penalty = principal_amount
-					.checked_mul(&penalty_rate.into())
-					.and_then(|v| v.checked_div(&scaling_factor.into()))
-					.ok_or("Penalty calculation failed")?;
+				let penalty = Self::get_penalty(principal_amount, penalty_rate);
 
-				if penalty == Zero::zero() {
-					penalty = One::one();
-				}
 				log::info!(target: TARGET, "Penalty: {:?}", penalty); // for runtime debugging
 
 				// println!("Penalty on pre-mature withdrawal: {:?}", penalty); // for testing only
@@ -579,14 +564,15 @@ pub mod pallet {
 			TryInto::<BalanceOf<T>>::try_into(input).ok()
 		}
 
-		pub fn get_fd_params() -> (u32, u32, u32, u32) {
-			let (interest_rate, scaling_factor, fd_epoch, penalty_rate) =
-				FDParams::<T>::get().unwrap();
+		pub fn get_fd_params() -> (Permill, Permill, u32) {
+			let (interest_rate, penalty_rate, fd_epoch) = FDParams::<T>::get().unwrap();
 
-			(interest_rate, scaling_factor, fd_epoch, penalty_rate)
+			(interest_rate, penalty_rate, fd_epoch)
 		}
 
 		// As per the plan the IS ∈ [0, 1000) following Log curve (increasing) ⎛
+		// NOTE: As logarithm can't be calculated on blockchain as its a floating point operation (indeterministic)
+		// & blockchain only supports deterministic operations.
 		pub fn get_investment_score(user: &T::AccountId) -> u16 {
 			let (_, investment_score) = FDUserDetails::<T>::get(user);
 			investment_score
@@ -602,10 +588,56 @@ pub mod pallet {
 			Ok((principal_amount, opened_at_block_number, expiry_duration))
 		}
 
-		// TODO: Create public function for SDK use case
-		// pub fn get_interest(principal_amount: BalanceOf<T>, interest_rate: u32, scaling_factor: u32, fd_epoch: u32, maturity_period: u32) {}
+		// get total interest amount for FD maturity period
+		fn get_interest(
+			principal_amount: BalanceOf<T>,
+			interest_rate: Permill,
+			fd_epoch: u32,
+			maturity_period: u32,
+		) -> Result<BalanceOf<T>, &'static str> {
+			let annual_interest = interest_rate * principal_amount;
+			let total_interest = annual_interest
+				.checked_mul(&maturity_period.into())
+				.and_then(|v| v.checked_div(&fd_epoch.into()))
+				.ok_or("Interest calculation failed")?;
 
-		// TODO: Create public function for SDK use case
-		// pub fn get_penalty(principal_amount: BalanceOf<T>, penalty_rate: u32, scaling_factor: u32, fd_epoch: u32) {}
+			Ok(total_interest)
+		}
+
+		// get penalty amount for FD maturity period i.e. if FD closed < maturity period.
+		fn get_penalty(principal_amount: BalanceOf<T>, penalty_rate: Permill) -> BalanceOf<T> {
+			let mut penalty = penalty_rate * principal_amount;
+
+			if penalty == Zero::zero() {
+				penalty = Permill::from_percent(1) * principal_amount;
+			}
+
+			penalty
+		}
+
+		// suppress warnings for defined code that aren't not used yet, but will be used in the future.
+		#[allow(dead_code)]
+		// calculate the investment score for the given maturity_amount and difficulty_factor
+		// formula: `IS = 1000 * (1 - (1 / (1 + MA / DF)))`
+		fn calculate_investment_score(
+			maturity_amount: FixedU128,
+			difficulty_factor: FixedU128,
+		) -> FixedU128 {
+			let one = FixedU128::from(1);
+			let thousand = FixedU128::from(1000);
+
+			// Calculate the ratio of maturity_amount to difficulty_factor
+			maturity_amount
+				.checked_div(&difficulty_factor)
+				// Add 1 to the ratio
+				.and_then(|ratio| ratio.checked_add(&one))
+				// Calculate the reciprocal of the incremented ratio
+				.and_then(|incremented_ratio| one.checked_div(&incremented_ratio))
+				// Subtract the reciprocal from 1
+				.and_then(|reciprocal| one.checked_sub(&reciprocal))
+				// Multiply the result by 1000
+				.and_then(|subtracted| subtracted.checked_mul(&thousand))
+				.unwrap_or_default()
+		}
 	}
 }
