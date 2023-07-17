@@ -62,7 +62,7 @@ pub mod pallet {
 		log,
 		pallet_prelude::*,
 		sp_runtime::{
-			traits::{checked_pow, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+			traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 			DispatchError, FixedU128, Permill,
 		},
 		traits::{
@@ -72,6 +72,7 @@ pub mod pallet {
 		Blake2_128Concat,
 	};
 	use frame_system::pallet_prelude::*;
+	use num_traits::checked_pow;
 
 	const ID1: LockIdentifier = *b"Invest__";
 
