@@ -1,6 +1,6 @@
 [package]
 name = "pallet-bank"
-version = "0.1.2"
+version = "0.2"
 description = "FRAME pallet bank for handling financial systems of investment, loans, etc."
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
 homepage = "https://github.com/abhi3700/substrate-playground/pallets/bank"

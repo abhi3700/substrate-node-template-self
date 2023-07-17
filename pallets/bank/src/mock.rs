@@ -21,6 +21,9 @@ pub const TREASURY: u64 = 100;
 
 pub const ONE_YEAR: u32 = 5_184_000;
 
+/// Balance of an account.
+pub type Balance = u128;
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -63,7 +66,7 @@ impl frame_system::Config for Test {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = u128;
+	type Balance = Balance;
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ConstU128<100>;
@@ -79,11 +82,11 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinFDAmount: <Test as pallet_balances::Config>::Balance = 50;
-	pub const MaxFDAmount: <Test as pallet_balances::Config>::Balance = 200_000;
-	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20;
-	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000;
-	pub const MinFDPeriod: u32 = ONE_YEAR;
+	pub const MinFDAmount: <Test as pallet_balances::Config>::Balance = 50 * 1e10 as Balance;
+	pub const MaxFDAmount: <Test as pallet_balances::Config>::Balance = 200_000 * 1e10 as Balance;
+	pub const MinLockValue: <Test as pallet_balances::Config>::Balance = 20 * 1e10 as Balance;
+	pub const MaxLockValue: <Test as pallet_balances::Config>::Balance = 100_000 * 1e10 as Balance;
+	pub const MaxFDMaturityPeriod: u32 = 5 * ONE_YEAR;	// 5 years
 }
 
 impl pallet_bank::Config for Test {
@@ -94,7 +97,7 @@ impl pallet_bank::Config for Test {
 	type MaxFDAmount = MaxFDAmount;
 	type MinLockValue = MinLockValue;
 	type MaxLockValue = MaxLockValue;
-	type MinFDPeriod = MinFDPeriod;
+	type MaxFDMaturityPeriod = MaxFDMaturityPeriod;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -103,11 +106,11 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![
-			(ALICE, 10_000),
-			(BOB, 20_000),
-			(CHARLIE, 30_000),
-			(DAVE, 40_000),
-			(TREASURY, 1_000_000),
+			(ALICE, 10_000 * 1e10 as Balance),
+			(BOB, 20_000 * 1e10 as Balance),
+			(CHARLIE, 30_000 * 1e10 as Balance),
+			(DAVE, 40_000 * 1e10 as Balance),
+			(TREASURY, 1_000_000 * 1e10 as Balance),
 		],
 	}
 	.assimilate_storage(&mut t)

@@ -35,9 +35,8 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for pallet_bank.
 pub trait WeightInfo {
-	fn set_fd_interest_rate() -> Weight;
+	fn set_fd_params() -> Weight;
 	fn set_treasury() -> Weight;
-	fn reset_treasury() -> Weight;
 	fn open_fd() -> Weight;
 	fn close_fd() -> Weight;
 	fn lock_for_membership() -> Weight;
@@ -49,7 +48,7 @@ pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Storage: TemplateModule Something (r:0 w:1)
 	/// Proof: TemplateModule Something (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
-	fn set_fd_interest_rate() -> Weight {
+	fn set_fd_params() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -67,18 +66,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		Weight::from_parts(6_000_000, 1489)
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
-	}
-
-	/// Storage: TemplateModule Something (r:1 w:1)
-	/// Proof: TemplateModule Something (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
-	fn reset_treasury() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `32`
-		//  Estimated: `1489`
-		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(6_000_000, 1489)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 
 	/// Storage: TemplateModule Something (r:1 w:1)
@@ -135,7 +122,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 impl WeightInfo for () {
 	/// Storage: TemplateModule Something (r:0 w:1)
 	/// Proof: TemplateModule Something (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
-	fn set_fd_interest_rate() -> Weight {
+	fn set_fd_params() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
@@ -146,18 +133,6 @@ impl WeightInfo for () {
 	/// Storage: TemplateModule Something (r:1 w:1)
 	/// Proof: TemplateModule Something (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
 	fn set_treasury() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `32`
-		//  Estimated: `1489`
-		// Minimum execution time: 6_000_000 picoseconds.
-		Weight::from_parts(6_000_000, 1489)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-
-	/// Storage: TemplateModule Something (r:1 w:1)
-	/// Proof: TemplateModule Something (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
-	fn reset_treasury() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `32`
 		//  Estimated: `1489`

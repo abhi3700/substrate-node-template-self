@@ -7,7 +7,8 @@ A pallet for handling financial systems of investment, loans, etc.
 
 ## Overview
 
-Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period.
+Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period. The FD principal amount
+has to be within the range of `min_fd_amount` & `max_fd_amount` (set by admin). The FD amount is reserved from the user's `free_balance`.
 
 During the FD period, the reserved amount cannot be used that's why need to be freed from the `free_balance`.
 In order to receive interest, FD can only be closed after the `fd_epoch` (set by admin) is elapsed, else the reserved amount is returned
@@ -27,7 +28,7 @@ shown as a [dev-dependencies] in the `Cargo.toml` file.
 
 ### Dispatchable Functions
 
-- `set_fd_interest_rate`
+- `set_fd_params`
 - `set_treasury`
 - `open_fd`
 - `close_fd`

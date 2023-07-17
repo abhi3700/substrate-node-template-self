@@ -7,7 +7,8 @@
 //!
 //! ## Overview
 //!
-//! Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period.
+//! Anyone can open FD (Fixed Deposit) by reserving some amount of currency with allowed maturity period. The FD principal amount
+//! has to be within the range of `min_fd_amount` & `max_fd_amount` (set by admin). The FD amount is reserved from the user's `free_balance`.
 //!
 //! During the FD period, the reserved amount cannot be used that's why need to be freed from the `free_balance`.
 //! In order to receive interest, FD can only be closed after the `fd_epoch` (set by admin) is elapsed, else the reserved amount is returned
@@ -27,7 +28,7 @@
 //!
 //! ### Dispatchable Functions
 //!
-//! - `set_fd_interest_rate`
+//! - `set_fd_params`
 //! - `set_treasury`
 //! - `open_fd`
 //! - `close_fd`
@@ -61,7 +62,7 @@ pub mod pallet {
 		log,
 		pallet_prelude::*,
 		sp_runtime::{
-			traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
+			traits::{checked_pow, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero},
 			DispatchError, FixedU128, Permill,
 		},
 		traits::{
@@ -106,9 +107,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxLockValue: Get<BalanceOf<Self>>;
 
-		// in blocks
 		#[pallet::constant]
-		type MinFDPeriod: Get<u32>;
+		type MaxFDMaturityPeriod: Get<u32>;
 	}
 
 	#[pallet::storage]
@@ -121,10 +121,11 @@ pub mod pallet {
 	// E.g. If the interest rate is 0.005% per year, then the interest (in decimal * scaling_factor) is 0.005e6 = 5000
 	// If the interest rate is 10%, then the interest set here as (0.1 * 1e6) = 100_000
 	//
-	// (u32, u32, u32, u32) tuple represents (interest_rate, penalty_rate, fd_epoch)
+	// (Permill, Permill, u16, u32) tuple represents (interest_rate, penalty_rate, compound_frequency, fd_epoch)
+	// `compound_frequency`: the number of times that interest is compounded per year
 	// `fd_epoch` is the duration in blocks for which the interest is applicable like 8% per year (this is the fd_epoch whether
 	// it should be a year or 2). So, here 8% is the interest per fd_epoch. Normally it should be 1 year.
-	pub type FDParams<T: Config> = StorageValue<_, (Permill, Permill, u32)>;
+	pub type FDParams<T: Config> = StorageValue<_, (Permill, Permill, u16, u32)>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn treasury)]
@@ -201,8 +202,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Zero Interest Rate
 		ZeroFDInterestRate,
-		/// Zero Scaling Factor
-		ZeroScalingFactor,
+		/// Zero Compound Frequency
+		ZeroFDCompoundFrequency,
 		/// Zero FD Epoch
 		ZeroFDEpoch,
 		/// Zero Penalty
@@ -216,7 +217,7 @@ pub mod pallet {
 		/// FD Vault Does Not Exist
 		FDVaultDoesNotExist,
 		/// FD Maturity Must Be Greater Than FD Epoch
-		FDMaturityMustBeGreaterThanFDEpoch,
+		FDMaturityPeriodOutOfRangeWhenOpening,
 		/// Zero Amount When Opening FD
 		ZeroAmountWhenOpeningFD,
 		/// Insufficient Free Balance When Opening FD
@@ -251,11 +252,12 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Set FD Interest Rate, Scaling Factor, Per_Duration (EPOCH)
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::set_fd_interest_rate())]
-		pub fn set_fd_interest_rate(
+		#[pallet::weight(T::WeightInfo::set_fd_params())]
+		pub fn set_fd_params(
 			origin: OriginFor<T>,
 			interest_rate: Permill,
 			penalty_rate: Permill,
+			compound_frequency: u16,
 			fd_epoch: u32,
 		) -> DispatchResult {
 			// ensure the root origin signed
@@ -267,11 +269,14 @@ pub mod pallet {
 			// ensure penalty is not zero
 			ensure!(penalty_rate > Permill::zero(), Error::<T>::ZeroFDPenalty);
 
+			// ensure compound frequency is not zero
+			ensure!(compound_frequency > 0, Error::<T>::ZeroFDCompoundFrequency);
+
 			// ensure per duration is not zero
 			ensure!(fd_epoch > 0, Error::<T>::ZeroFDEpoch);
 
 			// set the FD params
-			FDParams::<T>::put((interest_rate, penalty_rate, fd_epoch));
+			FDParams::<T>::put((interest_rate, penalty_rate, compound_frequency, fd_epoch));
 
 			// emit the event
 			Self::deposit_event(Event::FDParamsSet { interest_rate, penalty_rate, fd_epoch });
@@ -298,29 +303,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Reset Treasury account from where the interest will be paid.
-		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::reset_treasury())]
-		pub fn reset_treasury(origin: OriginFor<T>) -> DispatchResult {
-			// ensure the root origin signed
-			ensure_root(origin)?;
-
-			// check treasury is set
-			ensure!(Treasury::<T>::get().is_some(), Error::<T>::TreasuryNotSet);
-
-			// set the treasury
-			Treasury::<T>::kill();
-
-			// emit the event
-			Self::deposit_event(Event::TreasuryReset {
-				block_num: <frame_system::Pallet<T>>::block_number(),
-			});
-
-			Ok(())
-		}
-
 		/// Open FD
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::open_fd())]
 		pub fn open_fd(
 			origin: OriginFor<T>,
@@ -347,8 +331,9 @@ pub mod pallet {
 
 			// ensure the maturity_period is greater than fd_epoch at least
 			ensure!(
-				maturity_period >= FDParams::<T>::get().unwrap().2,
-				Error::<T>::FDMaturityMustBeGreaterThanFDEpoch
+				maturity_period >= FDParams::<T>::get().unwrap().3
+					&& maturity_period <= T::MaxFDMaturityPeriod::get(),
+				Error::<T>::FDMaturityPeriodOutOfRangeWhenOpening
 			);
 
 			// get the next fd id for the user
@@ -384,7 +369,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::close_fd())]
 		pub fn close_fd(origin: OriginFor<T>, id: u32, has_matured: u8) -> DispatchResult {
 			// ensure signed origin
@@ -408,7 +393,7 @@ pub mod pallet {
 			let treasury = <Treasury<T>>::get().ok_or(Error::<T>::TreasuryNotSet)?;
 
 			// get the interest if exists
-			let (interest_rate, penalty_rate, fd_epoch) =
+			let (interest_rate, penalty_rate, compound_frequency, fd_epoch) =
 				FDParams::<T>::get().ok_or(Error::<T>::FDInterestNotSet)?;
 
 			// get the current block number
@@ -420,19 +405,21 @@ pub mod pallet {
 				.ok_or(Error::<T>::ArithmeticUnderflow)?;
 			// log::info!(target: TARGET, "Staked duration: {:?}", interest);
 
-			// get the min_fd_period
-			let _min_fd_period = T::MinFDPeriod::get();
-
 			// Here, maturity_period is considered for calculation due to FD,
 			// Otherwise, in case of RD, the staked_duration is considered for calculation, although it has lesser
 			// interest rate than FD.
 			if staked_duration >= maturity_period.into() && has_matured == 1 {
-				// if the FD is open for min. duration i.e. `MinFDPeriod`, then calculate the interest
+				// if the FD is open for min. duration i.e. `FDEpoch`, then calculate the interest
 				// & transfer the (principal_amount + interest) from the treasury account to the FD holder;
 				// else transfer the amount only from the treasury account to the caller
 				// calculate the interest directly
-				let total_interest =
-					Self::get_interest(principal_amount, interest_rate, fd_epoch, maturity_period)?;
+				let total_interest: BalanceOf<T> = Self::get_compound_interest(
+					principal_amount,
+					interest_rate,
+					compound_frequency,
+					fd_epoch,
+					maturity_period,
+				)?;
 
 				log::info!(target: TARGET, "Interest: {:?}", total_interest);
 				// println!("Interest on post-mature withdrawal: {:?}", interest); // for testing only
@@ -506,7 +493,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::lock_for_membership())]
 		pub fn lock_for_membership(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 			// ensure signed origin
@@ -534,7 +521,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::unlock_for_membership())]
 		pub fn unlock_for_membership(origin: OriginFor<T>) -> DispatchResult {
 			// ensure signed origin
@@ -554,9 +541,14 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		//function to convert balance to u32
+		// function to convert balance to u32
 		pub fn balance_to_u32(input: BalanceOf<T>) -> Option<u32> {
 			TryInto::<u32>::try_into(input).ok()
+		}
+
+		// function to convert balance to u128
+		pub fn balance_to_u128(input: BalanceOf<T>) -> Option<u128> {
+			TryInto::<u128>::try_into(input).ok()
 		}
 
 		// NOTE: prefer this to avoid truncating during arithmetic operations
@@ -564,10 +556,17 @@ pub mod pallet {
 			TryInto::<BalanceOf<T>>::try_into(input).ok()
 		}
 
-		pub fn get_fd_params() -> (Permill, Permill, u32) {
-			let (interest_rate, penalty_rate, fd_epoch) = FDParams::<T>::get().unwrap();
+		// function to convert u128 to balance
+		pub fn u128_to_balance(input: u128) -> Option<BalanceOf<T>> {
+			TryInto::<BalanceOf<T>>::try_into(input).ok()
+		}
 
-			(interest_rate, penalty_rate, fd_epoch)
+		// Get the FD params
+		pub fn get_fd_params() -> (Permill, Permill, u16, u32) {
+			let (interest_rate, penalty_rate, compound_frequency, fd_epoch) =
+				FDParams::<T>::get().unwrap();
+
+			(interest_rate, penalty_rate, compound_frequency, fd_epoch)
 		}
 
 		// As per the plan the IS ∈ [0, 1000) following Log curve (increasing) ⎛
@@ -588,19 +587,22 @@ pub mod pallet {
 			Ok((principal_amount, opened_at_block_number, expiry_duration))
 		}
 
-		// get total interest amount for FD maturity period
-		fn get_interest(
+		// Get simple interest
+		// NOTE: No compounding of interest, interest is calculated on the principal amount
+		// only based on staked duration
+		#[allow(dead_code)]
+		fn get_simple_interest(
 			principal_amount: BalanceOf<T>,
 			interest_rate: Permill,
 			fd_epoch: u32,
 			maturity_period: u32,
 		) -> Result<BalanceOf<T>, &'static str> {
+			// calc_simple_interest
 			let annual_interest = interest_rate * principal_amount;
 			let total_interest = annual_interest
 				.checked_mul(&maturity_period.into())
 				.and_then(|v| v.checked_div(&fd_epoch.into()))
-				.ok_or("Interest calculation failed")?;
-
+				.ok_or("Simple Interest calculation failed")?;
 			Ok(total_interest)
 		}
 
@@ -613,6 +615,62 @@ pub mod pallet {
 			}
 
 			penalty
+		}
+
+		// get total interest amount for FD maturity period
+		// ```txt
+		// A = P * (1 + r/n)^(nt)
+		//
+		// A = the future value of the investment (i.e. principal amount), including interest
+		// P = the principal investment amount (the initial deposit)
+		// r = the annual interest rate (decimal)
+		// n = the number of times that interest is compounded per year
+		// t = the number of years the money is invested
+		// ```
+		pub fn get_compound_interest(
+			principal_amount: BalanceOf<T>,
+			interest_rate: Permill,
+			compound_frequency: u16,
+			fd_epoch: u32,
+			maturity_period: u32,
+		) -> Result<BalanceOf<T>, &'static str> {
+			//
+			let interest_rate_in_percent = interest_rate.deconstruct();
+
+			// r/n
+			// = interest_rate / compound_frequency
+			// NOTE: here, fd_epoch is generic so that any financial institution can
+			// set this based on their own duration of consideration instead of default 1 year.
+			// For 1 year, fd_epoch = 5_184_000 blocks, assuming 1 block = 6s.
+			let k = FixedU128::from_inner(interest_rate_in_percent as u128 * 1e12 as u128);
+
+			// 1 + r/n
+			let l = FixedU128::from(1).checked_add(&k).unwrap();
+
+			// n * t
+			let compound_frequency_u32 = compound_frequency as u32;
+			let nt = compound_frequency_u32 * maturity_period / fd_epoch;
+			// println!("nt: {:?}", nt);
+
+			// (1 + r/n) ^ (n * t)
+			let cp: FixedU128 = checked_pow(l, nt as usize).unwrap();
+
+			// CI = MA - PA
+			// CI_factor = [(1 + r/n) ^ (n * t) - 1]
+			let cp_minus_one: FixedU128 =
+				cp.checked_sub(&FixedU128::from_u32(1)).unwrap_or_default();
+
+			let p_u128: u128 = Self::balance_to_u128(principal_amount).unwrap();
+			let p_fixedu128: FixedU128 = FixedU128::from(p_u128);
+
+			let total_interest_fixedu128: FixedU128 =
+				cp_minus_one.checked_mul(&p_fixedu128).unwrap_or_default();
+			let total_interest_u128 = total_interest_fixedu128.into_inner() / 1e18 as u128;
+			let total_interest: BalanceOf<T> =
+				TryInto::<BalanceOf<T>>::try_into(total_interest_u128)
+					.map_err(|_| "Compound Interest calculation failed")?;
+
+			Ok(total_interest)
 		}
 
 		// suppress warnings for defined code that aren't not used yet, but will be used in the future.
@@ -638,6 +696,18 @@ pub mod pallet {
 				// Multiply the result by 1000
 				.and_then(|subtracted| subtracted.checked_mul(&thousand))
 				.unwrap_or_default()
+		}
+
+		// Required for testing
+		/// Reset Treasury account from where the interest will be paid.
+		pub fn reset_treasury() {
+			// set the treasury
+			Treasury::<T>::kill();
+
+			// emit the event
+			Self::deposit_event(Event::TreasuryReset {
+				block_num: <frame_system::Pallet<T>>::block_number(),
+			});
 		}
 	}
 }

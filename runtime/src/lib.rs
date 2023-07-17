@@ -334,11 +334,11 @@ impl pallet_voting::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinFDAmount: Balance = 50;
-	pub const MaxFDAmount: Balance = 200_000;
-	pub const MinLockValue: Balance = 20;
-	pub const MaxLockValue: Balance = 10_000;
-	pub const MinFDPeriod: u32 = 5_184_000;	// 1 year
+	pub const MinFDAmount: Balance = 50 * 1e10 as Balance;
+	pub const MaxFDAmount: Balance = 200_000 * 1e10 as Balance;
+	pub const MinLockValue: Balance = 20 * 1e10 as Balance;
+	pub const MaxLockValue: Balance = 10_000 * 1e10 as Balance;
+	pub const MaxFDMaturityPeriod: u32 = 15_552_000;	// 5 years
 }
 
 // Configure the pallet-bank in pallets/bank.
@@ -350,7 +350,7 @@ impl pallet_bank::Config for Runtime {
 	type MaxFDAmount = MaxFDAmount;
 	type MinLockValue = MinLockValue;
 	type MaxLockValue = MaxLockValue;
-	type MinFDPeriod = MinFDPeriod;
+	type MaxFDMaturityPeriod = MaxFDMaturityPeriod;
 }
 
 /// Configure the pallet-counter in pallets/counter.

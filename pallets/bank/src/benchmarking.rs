@@ -12,7 +12,7 @@ mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn set_fd_interest_rate() {
+	fn set_fd_params() {
 		// let value = 100u32.into();
 		// let caller: T::AccountId = whitelisted_caller();
 		// #[extrinsic_call]

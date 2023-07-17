@@ -6,15 +6,43 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- [ ] Added a storage parameter difficulty factor for using in the IS formula.
+the IS formula.
+
 - [ ] Added a RD vault for opening a RD account/vault.
-- [ ] Limit the max. value of `maturity_period` to be ∈ [`fd_epoch`, `MaxMaturityPeriod`]. This is to be done in `open_fd` extrinsic. The min. is `fd_epoch` & max. 5 years (set as `pallet::constant`).
 - [ ] We can also add the functionality of auto_maturity of FDs using hooks.
 - [ ] After every few blocks, some balance is transferred to the TREASURY account.
   - L0 chain's inflation is transferred to the TREASURY account.
 - [ ] Just immediately after the pallet deployment, the `FDParams` are supposed to be set. This can be done during genesis build.
 
 ### Changed
+
+### Fixed
+
+## [0.2] - 2023-07-17
+
+### Added
+
+- [x] Add tests:
+  - `open_fd_fail_when_zero_maturity_period`
+  - `open_fd_fail_when_maturity_period_less_than_fd_epoch`
+  - `open_fd_fail_when_maturity_period_more_than_max_maturity_period`
+- [x] Limit the max. value of `maturity_period` to be ∈ [`fd_epoch`, `MaxMaturityPeriod`]. This is to be done in `open_fd` extrinsic. The min. is `fd_epoch` & max. 5 years (set as `pallet::constant`).
+
+### Changed
+
+- [x] Modify the FD interest calculation as per the banking formula using `FixedU128` type into consideration for ensuring decimal values.
+
+  ```txt
+  A = P * (1 + r/n)^(nt)
+
+  A = the future value of the investment (i.e. principal amount), including interest
+  P = the principal investment amount (the initial deposit)
+  r = the annual interest rate (decimal)
+  n = the number of times that interest is compounded per year
+  t = the number of years the money is invested
+  ```
+
+- [x] Moved `reset_treasury` from extrinsic to helper function for testing purpose.
 
 ### Fixed
 
