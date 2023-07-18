@@ -1,10 +1,10 @@
 use crate::{mock::*, Error, Event};
-use frame_support::{assert_noop, assert_ok, pallet_macros, sp_runtime::Permill};
+use frame_support::{assert_noop, assert_ok, sp_runtime::Permill};
 
 use sp_runtime::{
-	traits::{checked_pow, CheckedAdd, CheckedMul, CheckedShl, CheckedSub},
+	traits::{checked_pow, CheckedAdd, CheckedMul, CheckedSub},
 	DispatchError::{BadOrigin, Token},
-	FixedU128, SaturatedConversion,
+	FixedU128,
 	TokenError::Frozen,
 };
 
@@ -17,6 +17,9 @@ const _HALF_YEAR: u32 = 2_592_000;
 const THREE_QUARTER_YEAR: u32 = 3_888_000;
 const ONE_YEAR: u32 = 5_184_000;
 
+// TODO: Create a macro that takes in the following parameters and creates a FD with those parameters.
+// The objective is to create multiple FDs with different parameters and test them with different users.
+// During assertions, we can check the maturity amount with the formula and check the maturity amount with the actual value (computed one).
 const PRINCIPAL_AMOUNT: Balance = 1e10 as u128 * 5000; // representing 5000$ in 1e10 units (as decimals)
 const INTEREST_RATE: Permill = Permill::from_percent(2); // 2%	or Permill::from_parts(20_000)
 const PENALTY_RATE: Permill = Permill::from_parts(5_000); // 0.5%, NOTE: can't represent 0.5 inside parenthesis.
@@ -26,9 +29,13 @@ const MATURITY_PERIOD: u32 = 3 * ONE_YEAR; // 3 years
 
 //=====getters=====
 
-/// get_maturity_amt just to check the Compound Interest Formula
+/// NOTE: this function is to check the Compound Interest Formula before inserting into the pallet (src/lib.rs)
+/// Why is this function not in `lib.rs` file? Because in `lib.rs`, the suggestions are not working properly in terms
+/// of speed & accuracy. Hence, this function is created to check the formula.
+///
 // #[test]
-fn get_maturity_amt() {
+#[allow(dead_code)]
+fn get_maturity_amt_in_compound_interest() {
 	let interest_rate_in_percent = INTEREST_RATE.deconstruct();
 	println!("interest_rate_in_percent: {:?}", interest_rate_in_percent); // interest_rate_in_percent: 20000
 

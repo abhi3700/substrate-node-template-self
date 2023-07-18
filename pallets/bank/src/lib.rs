@@ -4,6 +4,8 @@
 //!
 //! - [`Config`]
 //! - [`Call`]
+//! - [`Storage`]
+//! - [`Event`]
 //!
 //! ## Overview
 //!

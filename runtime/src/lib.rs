@@ -69,6 +69,9 @@ pub use pallet_lockable_currency;
 /// Import the arithmetic pallet.
 pub use pallet_arithmetic;
 
+/// Import the dpos pallet.
+pub use pallet_dpos;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -353,10 +356,32 @@ impl pallet_bank::Config for Runtime {
 	type MaxFDMaturityPeriod = MaxFDMaturityPeriod;
 }
 
-/// Configure the pallet-counter in pallets/counter.
+/// Configure the pallet-arithmetic in pallets/arithmetic.
 impl pallet_arithmetic::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_arithmetic::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const MinStakeAmount: Balance = 50 * 1e10 as Balance;	// 50 EOS
+	pub const MaxVotesPerAccount: u32 = 30;	// 30 validators
+	pub const ActiveValidatorsCount: u8 = 21;	// 21 validators
+	pub const StandbyValidatorsCount: u16 = 50;	// 50 validators
+	pub const RankingDuration: u32 = 14_400;	// in blocks
+	pub const HeartbeatDuration: u32 = 10;		// in blocks
+}
+
+/// Configure the pallet-dpos in pallets/dpos.
+impl pallet_dpos::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_dpos::weights::SubstrateWeight<Runtime>;
+	type MyCurrency = Balances;
+	type MinStakeAmount = MinStakeAmount;
+	type MaxVotesPerAccount = MaxVotesPerAccount;
+	type ActiveValidatorsCount = ActiveValidatorsCount;
+	type StandbyValidatorsCount = StandbyValidatorsCount;
+	type RankingDuration = RankingDuration;
+	type HeartbeatDuration = HeartbeatDuration;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -383,6 +408,7 @@ construct_runtime!(
 		LockableCurrency: pallet_lockable_currency,
 		Bank: pallet_bank,
 		Arithmetic: pallet_arithmetic,
+		DPoS: pallet_dpos,
 	}
 );
 
@@ -437,6 +463,7 @@ mod benches {
 		[pallet_lockable_currency, LockableCurrency]
 		[pallet_bank, Bank]
 		[pallet_arithmetic, Arithmetic]
+		[pallet_dpos, DPoS]
 	);
 }
 
