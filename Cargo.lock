@@ -4463,7 +4463,7 @@ dependencies = [
  "pallet-balances",
  "pallet-bank",
  "pallet-counter",
- "pallet-dpos",
+ "pallet-eosio-system",
  "pallet-flipper",
  "pallet-grandpa",
  "pallet-hello",
@@ -4776,13 +4776,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-dpos"
+name = "pallet-eosio-system"
 version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

@@ -1,4 +1,4 @@
-use crate as pallet_dpos;
+use crate as pallet_eosio_system;
 use frame_support::{
 	parameter_types,
 	traits::{ConstU128, ConstU16, ConstU32, ConstU64},
@@ -32,9 +32,9 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		// used as dependency (for handling accounts and balances) for pallet_dpos
+		// used as dependency (for handling accounts and balances) for pallet_eosio_system
 		Balances: pallet_balances,
-		DPoS: pallet_dpos,
+		EOSIOSystem: pallet_eosio_system,
 	}
 );
 
@@ -90,8 +90,8 @@ parameter_types! {
 	pub const HeartbeatDuration: u32 = 10;		// in blocks
 }
 
-/// Configure the pallet-dpos in pallets/dpos.
-impl pallet_dpos::Config for Test {
+/// Configure the pallet-eosio-system in pallets/eosio_system.
+impl pallet_eosio_system::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type MyCurrency = Balances;

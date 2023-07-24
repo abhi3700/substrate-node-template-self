@@ -57,7 +57,7 @@ pallet-voting = { version = "0.1.0", default-features = false, path = "../pallet
 pallet-lockable-currency = { version = "0.1.0", default-features = false, path = "../pallets/lockable-currency" }
 pallet-bank = { version = "0.1.4", default-features = false, path = "../pallets/bank" }
 pallet-arithmetic = { version = "0.1.0", default-features = false, path = "../pallets/arithmetic" }
-pallet-dpos = { version = "0.1.0", default-features = false, path = "../pallets/dpos" }
+pallet-eosio-system = { version = "0.1.0", default-features = false, path = "../pallets/eosio_system" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", optional = true , branch = "polkadot-v0.9.42" }
@@ -88,7 +88,7 @@ std = [
 	"pallet-lockable-currency/std",
 	"pallet-bank/std",
 	"pallet-arithmetic/std",
-	"pallet-dpos/std",
+	"pallet-eosio-system/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -122,7 +122,7 @@ runtime-benchmarks = [
 	"pallet-lockable-currency/runtime-benchmarks",
 	"pallet-bank/runtime-benchmarks",
 	"pallet-arithmetic/runtime-benchmarks",
-	"pallet-dpos/runtime-benchmarks",
+	"pallet-eosio-system/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
@@ -144,7 +144,7 @@ try-runtime = [
 	"pallet-lockable-currency/try-runtime",
 	"pallet-bank/try-runtime",
 	"pallet-arithmetic/try-runtime",
-	"pallet-dpos/try-runtime",
+	"pallet-eosio-system/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 ]

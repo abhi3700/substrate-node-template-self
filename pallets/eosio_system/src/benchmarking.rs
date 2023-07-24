@@ -1,9 +1,9 @@
-//! Benchmarking setup for pallet-dpos
+//! Benchmarking setup for pallet-eosio-system
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as DPoS;
+use crate::Pallet as EOSIOSystem;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
@@ -31,5 +31,5 @@ mod benchmarks {
 		// assert_eq!(Something::<T>::get(), Some(101u32));
 	}
 
-	impl_benchmark_test_suite!(DPoS, crate::mock::new_test_ext(), crate::mock::Test);
+	impl_benchmark_test_suite!(EOSIOSystem, crate::mock::new_test_ext(), crate::mock::Test);
 }

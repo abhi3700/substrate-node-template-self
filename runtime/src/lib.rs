@@ -70,7 +70,7 @@ pub use pallet_lockable_currency;
 pub use pallet_arithmetic;
 
 /// Import the dpos pallet.
-pub use pallet_dpos;
+pub use pallet_eosio_system;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -369,12 +369,13 @@ parameter_types! {
 	pub const StandbyValidatorsCount: u16 = 50;	// 50 validators
 	pub const RankingDuration: u32 = 14_400;	// in blocks
 	pub const HeartbeatDuration: u32 = 10;		// in blocks
+	pub const MaxProducerInfoUrlLen: u16 = 256;	// string can't be 512 bytes with utf-16 encoding
 }
 
-/// Configure the pallet-dpos in pallets/dpos.
-impl pallet_dpos::Config for Runtime {
+/// Configure the pallet-eosio-system in pallets/eosio_system.
+impl pallet_eosio_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_dpos::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_eosio_system::weights::SubstrateWeight<Runtime>;
 	type MyCurrency = Balances;
 	type MinStakeAmount = MinStakeAmount;
 	type MaxVotesPerAccount = MaxVotesPerAccount;
@@ -382,6 +383,7 @@ impl pallet_dpos::Config for Runtime {
 	type StandbyValidatorsCount = StandbyValidatorsCount;
 	type RankingDuration = RankingDuration;
 	type HeartbeatDuration = HeartbeatDuration;
+	type MaxProducerInfoUrlLen = MaxProducerInfoUrlLen;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -408,7 +410,7 @@ construct_runtime!(
 		LockableCurrency: pallet_lockable_currency,
 		Bank: pallet_bank,
 		Arithmetic: pallet_arithmetic,
-		DPoS: pallet_dpos,
+		EOSIOSystem: pallet_eosio_system,
 	}
 );
 
@@ -463,7 +465,7 @@ mod benches {
 		[pallet_lockable_currency, LockableCurrency]
 		[pallet_bank, Bank]
 		[pallet_arithmetic, Arithmetic]
-		[pallet_dpos, DPoS]
+		[pallet_eosio_system, DPoS]
 	);
 }
 

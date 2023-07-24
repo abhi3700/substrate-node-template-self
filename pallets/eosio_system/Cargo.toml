@@ -1,9 +1,9 @@
 [package]
-name = "pallet-dpos"
+name = "pallet-eosio-system"
 version = "0.1.0"
-description = "FRAME pallet dpos implementation inspired by EOS blockchain"
+description = "FRAME pallet for applying DPoS on EOSIO block producers"
 authors = ["Abhijit Roy <https://github.com/abhi3700>"]
-homepage = "https://github.com/abhi3700/substrate-playground/pallets/dpos"
+homepage = "https://github.com/abhi3700/substrate-playground/pallets/eosio-system"
 edition = "2021"
 license = "MIT-0"
 publish = true
@@ -22,7 +22,6 @@ frame-support = { version = "4.0.0-dev", default-features = false, git = "https:
 frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
-pallet-balances = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-core = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-io = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { version = "7.0.0", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

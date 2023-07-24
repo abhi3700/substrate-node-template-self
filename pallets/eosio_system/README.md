@@ -1,4 +1,4 @@
-# DPoS Pallet
+# EOSIO System Pallet
 
 ## Overview
 
@@ -23,7 +23,7 @@ $ cargo build -r
 To run all the tests in a pallet:
 
 ```sh
-$ cargo test -p pallet-template
+$ cargo test -p pallet-eosio-system
 ```
 
 ---
@@ -32,7 +32,7 @@ To run the individual test:
 
 ```sh
 # example
-$ cargo test -p pallet-template --lib -- tests::it_works_for_default_value
+$ cargo test -p pallet-eosio-system --lib -- tests::it_works_for_default_value
 ```
 
 Although there is a button shown above to run individual test in VSCode.
