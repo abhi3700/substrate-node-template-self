@@ -23,6 +23,7 @@ Pallets are the building blocks of the runtime. They are the modules that implem
 ### Real
 
 - [x] [Bank](./bank/) - A pallet to to handle multiple investment types.
+- [ ] 🧑🏻‍💻 DPoS Substrate node
 - [ ] AntelopeAccount
   <details>
   <summary>View details:</summary>
@@ -70,8 +71,6 @@ Pallets are the building blocks of the runtime. They are the modules that implem
   Make sure to thoroughly review and test any changes to account management code, as mistakes can lead to lost funds or other serious issues.
 
   </details>
-
-- [ ] DPoS
 
 ## Add NEW pallet
 
@@ -146,10 +145,10 @@ In order to view the values of the variables in the test function, you can use `
 From your CLI at the root of the repo location, run this command:
 
 ```sh
-# if w default features
+# if w default features, (used in testing under [dev-dependencies])
 $ cargo add <crate-name> -p <pallet-name>
 
-# if w/o default features
+# if w/o default features (used in production under [dependencies])
 $ cargo add <crate-name> -p <pallet-name> --no-default-features
 ```
 
@@ -165,16 +164,7 @@ This is a very common scenario where anyone would want to use your pallet's func
 
 For any sort of documentation, it is recommended to follow rust inner doc formats i.e `//!` for entire pallet; `///` for config, storage, events, errors, dispatchables.
 
-And for overview, add a section with `## Overview` title & mention with dispatchables in bullets. That's it!
-
-```markdown
-## Overview
-
-Hello pallet has 2 dispatchables:
-
-- `say_hello`
-- `say_any`
-```
+[TEMPLATE](https://github.com/paritytech/substrate/blob/master/frame/examples/basic/README.md#documentation-template)
 
 To view the documentation of `pallet-example` done inside `src/lib.rs` using `//!`, run this command at the repository root:
 
