@@ -132,7 +132,7 @@ pub mod pallet {
 		type HeartbeatDuration: Get<u32>;
 
 		#[pallet::constant]
-		type MaxProducerInfoUrlLen: Get<u16>;
+		type MaxProducerInfoUrlLen: Get<u32>;
 	}
 
 	#[derive(
@@ -160,7 +160,7 @@ pub mod pallet {
 		total_votes: FixedU128,
 		// eosio::public_key producer_key; // a packed public key object
 		is_active: bool,
-		url: BoundedVec<u16, T::MaxVotesPerAccount>,
+		url: BoundedVec<u16, T::MaxProducerInfoUrlLen>,
 		unpaid_blocks: u32,
 		last_claim_time: T::BlockNumber,
 		location: u16,
@@ -263,7 +263,7 @@ pub mod pallet {
 			// Ensure the URL is no longer than 512 bytes. 2*256 = 512
 			// TEST: get a benchmarking for long url
 			ensure!(
-				T::MaxProducerInfoUrlLen::get() > url.len() as u16,
+				T::MaxProducerInfoUrlLen::get() > url.len() as u32,
 				Error::<T>::InvalidProducerInfoUrl
 			);
 
