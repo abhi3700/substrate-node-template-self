@@ -394,6 +394,7 @@ impl pallet_eosio_system::Config for Runtime {
 impl pallet_ocw::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = pallet_ocw::crypto::TestAuthId;
+	type MaxPrices = ConstU32<64>;
 }
 
 use codec::Encode;

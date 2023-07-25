@@ -92,6 +92,7 @@ where
 impl pallet_ocw::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = pallet_ocw::crypto::TestAuthId;
+	type MaxPrices = ConstU32<64>;
 }
 
 fn test_pub() -> sp_core::sr25519::Public {
