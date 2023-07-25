@@ -1,11 +1,13 @@
 //! Offchain tutorial source: https://docs.substrate.io/tutorials/build-application-logic/add-offchain-workers/
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use frame_support::sp_runtime::traits::BlockNumberProvider;
+use frame_support::sp_runtime::traits::Saturating;
+use frame_support::traits::Get;
 use frame_system::offchain::{
 	AppCrypto, CreateSignedTransaction, SendSignedTransaction, SendUnsignedTransaction,
 	SignedPayload, Signer, SigningTypes, SubmitTransaction,
 };
-
 use sp_core::crypto::KeyTypeId;
 // use sp_std::vec::Vec;
 
@@ -52,6 +54,7 @@ pub use pallet::*;
 pub mod pallet {
 	use super::*;
 	use frame_support::{log, pallet_prelude::*};
+
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -64,6 +67,10 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+
+		/// Maximum number of prices.
+		#[pallet::constant]
+		type MaxPrices: Get<u32>;
 	}
 
 	#[pallet::hooks]
@@ -90,7 +97,7 @@ pub mod pallet {
 			//	 - `Some((account, Ok(())))`: transaction is successfully sent
 			//	 - `Some((account, Err(())))`: error occurred when sending the transaction
 			let results =
-				signer.send_signed_transaction(|_account| Call::do_something { something: 42 });
+				signer.send_signed_transaction(|_account| Call::submit_price { price: 42 });
 
 			for (acc, res) in &results {
 				match res {
@@ -102,22 +109,17 @@ pub mod pallet {
 		// ...
 	}
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
 	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+	pub type Prices<T: Config> = StorageValue<_, BoundedVec<u32, T::MaxPrices>, ValueQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored { something: u32, who: T::AccountId },
+		/// New price added
+		NewPrice { price: u32, who_maybe: Option<T::AccountId> },
 	}
 
 	// Errors inform users that something went wrong.
@@ -127,6 +129,8 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		/// error in calculating avg price
+		AvgPriceCalculationError,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -138,39 +142,56 @@ pub mod pallet {
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
 		#[pallet::weight({10_000})]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
+		pub fn submit_price(origin: OriginFor<T>, price: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			// Update storage.
-			<Something<T>>::put(something);
+			Self::add_price(Some(who), price);
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored { something, who });
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
+	}
 
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::call_index(1)]
-		#[pallet::weight({10_000})]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+	impl<T: Config> BlockNumberProvider for Pallet<T> {
+		type BlockNumber = T::BlockNumber;
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => return Err(Error::<T>::NoneValue.into()),
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
+		fn current_block_number() -> Self::BlockNumber {
+			<frame_system::Pallet<T>>::block_number()
+		}
+	}
+}
+
+enum TransactionType {
+	Signed,
+	UnsignedForAny,
+	UnsignedForAll,
+	Raw,
+	None,
+}
+
+impl<T: Config> Pallet<T> {
+	fn add_price(who_maybe: Option<T::AccountId>, price: u32) {
+		frame_support::log::info!("Adding price: {}", price);
+		// update the price, calcualate the average.
+		<Prices<T>>::mutate(|prices| {
+			if prices.try_push(price).is_err() {
+				prices[(price % T::MaxPrices::get()) as usize] = price;
 			}
+		});
+
+		let avg_price = Self::average_price().expect("error in Calculation of avg price");
+		frame_support::log::info!("Average price: {}", avg_price);
+
+		// Emit an event.
+		Self::deposit_event(Event::NewPrice { price, who_maybe });
+	}
+
+	fn average_price() -> Option<u32> {
+		let prices = <Prices<T>>::get();
+		if prices.is_empty() {
+			None
+		} else {
+			Some(prices.iter().fold(0, |acc, x| acc.saturating_add(*x) / prices.len() as u32))
 		}
 	}
 }

@@ -9,6 +9,8 @@ members = [
     "pallets/voting",
     "pallets/lockable-currency",
     "pallets/bank",
+    "pallets/eosio_system",
+    "pallets/ocw",
     "runtime",
 ]
 [profile.release]

@@ -23,8 +23,9 @@ Pallets are the building blocks of the runtime. They are the modules that implem
 ### Real
 
 - [x] [Bank](./bank/) - A pallet to to handle multiple investment types.
-- [ ] 🧑🏻‍💻 DPoS Substrate node
-- [ ] AntelopeAccount
+- [ ] 🧑🏻‍💻 EOSIO System
+- [ ] Antelope Name
+- [ ] Antelope Account
   <details>
   <summary>View details:</summary>
   Q. In Rust substrate, I really think that account generation may have a better way. As in, in substrate, currently account has this stash versus controller model. And I feel that it should be in such a way where an account has two key pairs. So if one of the key pair is compromised, the person can actually use the other key pair to change that key pair. Can we do that?

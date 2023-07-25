@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 the IS formula.
 
 - [ ] Added a RD vault for opening a RD account/vault.
+- [ ] Add OCW (Off-chain worker) for setting the FD interest rate based on repo_rate & inflation fetched externally.
 - [ ] We can also add the functionality of auto_maturity of FDs using hooks.
 - [ ] After every few blocks, some balance is transferred to the TREASURY account.
   - L0 chain's inflation is transferred to the TREASURY account.

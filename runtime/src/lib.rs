@@ -13,7 +13,8 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, One, Verify,
+		AccountIdLookup, BlakeTwo256, Block as BlockT, Extrinsic, IdentifyAccount, NumberFor, One,
+		Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
@@ -69,8 +70,11 @@ pub use pallet_lockable_currency;
 /// Import the arithmetic pallet.
 pub use pallet_arithmetic;
 
-/// Import the dpos pallet.
+/// Import the eosio_system pallet.
 pub use pallet_eosio_system;
+
+/// Import the ocw pallet.
+pub use pallet_ocw;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -386,6 +390,70 @@ impl pallet_eosio_system::Config for Runtime {
 	type MaxProducerInfoUrlLen = MaxProducerInfoUrlLen;
 }
 
+/// Configure the pallet-ocw in pallets/ocw.
+impl pallet_ocw::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AuthorityId = pallet_ocw::crypto::TestAuthId;
+}
+
+use codec::Encode;
+use sp_runtime::{generic::Era, SaturatedConversion};
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: RuntimeCall,
+		public: <Signature as Verify>::Signer,
+		account: AccountId,
+		nonce: Index,
+	) -> Option<(RuntimeCall, <UncheckedExtrinsic as Extrinsic>::SignaturePayload)> {
+		let tip = 0;
+		// take the biggest period possible.
+		let period =
+			BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+		let current_block = System::block_number()
+			.saturated_into::<u64>()
+			// The `System::block_number` is initialized with `n+1`,
+			// so the actual block number is `n`.
+			.saturating_sub(1);
+		let era = Era::mortal(period, current_block);
+		let extra = (
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(era),
+			frame_system::CheckNonce::<Runtime>::from(nonce),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+		let raw_payload = SignedPayload::new(call, extra)
+			.map_err(|e| {
+				frame_support::log::warn!("Unable to create signed payload: {:?}", e);
+			})
+			.ok()?;
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+		let address = account;
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature, extra)))
+	}
+}
+
+impl frame_system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	RuntimeCall: From<C>,
+{
+	type Extrinsic = UncheckedExtrinsic;
+	type OverarchingCall = RuntimeCall;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -411,6 +479,7 @@ construct_runtime!(
 		Bank: pallet_bank,
 		Arithmetic: pallet_arithmetic,
 		EOSIOSystem: pallet_eosio_system,
+		OCW: pallet_ocw,
 	}
 );
 
@@ -465,7 +534,8 @@ mod benches {
 		[pallet_lockable_currency, LockableCurrency]
 		[pallet_bank, Bank]
 		[pallet_arithmetic, Arithmetic]
-		[pallet_eosio_system, DPoS]
+		[pallet_eosio_system, EOSIOSystem]
+		[pallet_ocw, OCW]
 	);
 }
 
