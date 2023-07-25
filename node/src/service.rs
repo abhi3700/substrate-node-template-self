@@ -125,18 +125,20 @@ pub fn new_partial(
 			compatibility_mode: Default::default(),
 		})?;
 
+	let keystore = keystore_container.keystore();
 	// NOTE: Can be done in development mode i.e. `--dev`
-	// if config.offchain_worker.enabled {
-	// 	// Initialize seed for signing transaction using offchain workers. This is a convenience
-	// 	// so learners can see the transactions submitted simply running the node.
-	// 	// Typically these keys should be inserted with RPC calls to `author_insertKey`.
-	// 	sp_keystore::CryptoStore::sr25519_generate_new(
-	// 		&*keystore,
-	// 		node_template_runtime::pallet_ocw::KEY_TYPE,
-	// 		Some("//Alice"),
-	// 	)
-	// 	.expect("Creating key with account Alice should succeed.");
-	// }
+	if config.offchain_worker.enabled {
+		// Initialize seed for signing transaction using offchain workers. This is a convenience
+		// so learners can see the transactions submitted simply running the node.
+		// Typically these keys should be inserted with RPC calls to `author_insertKey`.
+		#[cfg(feature = "ocw")]
+		sp_keystore::Keystore::sr25519_generate_new(
+			&*keystore,
+			node_template_runtime::pallet_ocw::KEY_TYPE,
+			Some("//Alice"),
+		)
+		.expect("Creating key with account Alice should succeed.");
+	}
 
 	Ok(sc_service::PartialComponents {
 		client,

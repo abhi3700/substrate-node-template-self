@@ -4472,6 +4472,7 @@ dependencies = [
  "sp-inherents",
  "sp-io",
  "sp-keyring",
+ "sp-keystore 0.27.0",
  "sp-runtime",
  "sp-timestamp",
  "substrate-build-script-utils",
