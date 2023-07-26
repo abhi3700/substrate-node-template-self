@@ -89,10 +89,17 @@ where
 	}
 }
 
+parameter_types! {
+	pub const UnsignedPriority: u64 = 1 << 20; // 2**20
+}
+
 impl pallet_ocw::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = pallet_ocw::crypto::TestAuthId;
+	type GracePeriod = ConstU64<5>;
 	type MaxPrices = ConstU32<64>;
+	type UnsignedPriority = UnsignedPriority;
+	type UnsignedInterval = ConstU64<128>;
 }
 
 fn test_pub() -> sp_core::sr25519::Public {

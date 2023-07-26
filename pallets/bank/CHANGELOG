@@ -17,6 +17,9 @@ the IS formula.
 
 ### Changed
 
+- [ ] `T::BlockNumber` -> `BlockNumberFor<Self>`
+- [ ] set the type of no. of blocks as `BlockNumberFor<Self>` instead of `Get<u32>` or similar.
+
 ### Fixed
 
 ## [0.1.4] - 2023-07-17

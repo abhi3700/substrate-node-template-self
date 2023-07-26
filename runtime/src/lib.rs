@@ -390,11 +390,18 @@ impl pallet_eosio_system::Config for Runtime {
 	type MaxProducerInfoUrlLen = MaxProducerInfoUrlLen;
 }
 
+parameter_types! {
+	pub const UnsignedPriority: u64 = 1 << 20; // 2**20
+}
+
 /// Configure the pallet-ocw in pallets/ocw.
 impl pallet_ocw::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AuthorityId = pallet_ocw::crypto::TestAuthId;
+	type GracePeriod = ConstU32<5>;
 	type MaxPrices = ConstU32<64>;
+	type UnsignedPriority = UnsignedPriority;
+	type UnsignedInterval = ConstU32<128>;
 }
 
 use codec::Encode;
